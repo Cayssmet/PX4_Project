@@ -528,7 +528,7 @@ if (offboard_setpoint_counter_ < 11) offboard_setpoint_counter_++;
 | 参数 | 建议值 | 逐字依据 |
 | --- | --- | --- |
 | `EKF2_EV_CTRL` | 分步：**先 3**（水平位置+垂直位置），稳定后 **加 yaw 位 → 11**，最后再考虑加速度位 → 15 | 官方定义 bitmask：`0: Horizontal position / 1: Vertical position / 2: 3D velocity / 3: Yaw`，**default 0**（即默认完全关闭） |
-| `EKF2_HGT_REF` | **Vision** | 官方原文："Set to `Vision` to use the vision as the reference source for altitude estimation." ★ 该参数在 v1.17 是否仍存在 **【待核实中】** |
+| `EKF2_HGT_REF` | **3 = Vision** | ✅ **已核实（v1.17.0）**：定义在 **`src/modules/ekf2/module.yaml:87-104`**，**不在任何 `params_*.yaml` 里**（所以按文件搜是搜不到的，这是它一度被当成"已删除"的原因）。`type: enum`，values 逐字 `0: Barometric pressure` / `1: GPS` / `2: Range sensor` / `3: Vision`，**`default: 1`（= GPS）**、`reboot_required: true`。★ **你没有 GPS，所以默认值 1 对你没有意义，必须显式改成 3。** long 原文里有一句室内必须知道的话：*"The range sensor and vision options should only be used when for operation over a flat surface as the local NED origin will move up and down with ground level."* ⇒ **用视觉做高度基准时，本地 NED 原点会跟着地面上下移动**；地面不平、或落点在小车上时，高度基准会跟着晃。<br>⚠ 残留未核实：C++ 消费端（`EKF2.cpp` / `EKF/height_control.cpp`）到底哪一行采用 vision 作高度基准**尚未读代码确认**，不能完全排除"YAML 定义了但代码已忽略" |
 | `EKF2_EV_DELAY` | 起手 **30 ms**，再按 §13 的方法调 | "delay from the time of the position measurement to the time the message is received by the flight controller"。**这是最重要的调参项** |
 | `EKF2_EV_NOISE_MD` | 0（默认） | "EV reported variance (parameter lower bound)"。即用我们报的方差，且有参数下限兜底 |
 | `EKF2_EVP_NOISE` | 0.1 m（默认起步） | 水平位置噪声下限 |
@@ -860,10 +860,10 @@ CH340 USB-TTL 转接板
 
 | # | 待核实项 | 影响 | 状态 |
 | --- | --- | --- | --- |
-| Q1 | `UXRCE_DDS_CFG` 的枚举值表（TELEM2 到底是 102 还是别的）与波特率设置位置 | M1 全部 | 核实中 |
+| Q1 | ~~`UXRCE_DDS_CFG` 的枚举值表与波特率设置位置~~ **✅ 已解决** | M1 全部 | **已解决**：枚举值不用记（QGC 按名称选 TELEM2）。波特率位置已定位——模块启动行 `-b p:${BAUD_PARAM}`，`${BAUD_PARAM}` 展开为 `SER_TEL2_BAUD`，**必须显式设 921600** |
 | Q2 | `COM_RC_OVERRIDE` 的完整位值表（Offboard 是第几位） | **安全关键** | 核实中 |
 | Q3 | `COM_RCL_EXCEPT` 的位值表 | 安全 | 核实中 |
-| Q4 | `EKF2_HGT_REF` 在 v1.17.0 是否仍存在；若已删除，替代机制是什么 | M3 | 核实中 |
+| Q4 | ~~`EKF2_HGT_REF` 在 v1.17.0 是否仍存在~~ **✅ 已解决**：仍在，`src/modules/ekf2/module.yaml:87-104`，enum `0 Barometric / 1 GPS / 2 Range sensor / 3 Vision`，**default 1(GPS)** | M3 | **已解决（有残留项）**：残留 = C++ 消费端（`EKF2.cpp` / `EKF/height_control.cpp`）未读，不能排除"YAML 定义了但代码已忽略" |
 | Q5 | `MPC_ALT_MODE` 的完整枚举与室内推荐值 | M5 定高 | 核实中 |
 | Q6 | `MPC_*` 位置/速度环参数逐条定义与室内推荐值 | M5 | 核实中 |
 | Q7 | 解锁被拒时 commander 具体报哪条检查失败、阈值参数名 | M4 排障 | 核实中 |
