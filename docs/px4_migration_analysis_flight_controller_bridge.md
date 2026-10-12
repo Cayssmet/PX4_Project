@@ -5,6 +5,11 @@
 - `D:\09_PX4\pi_ros2_ws\src\uav_interfaces\`
 - `D:\09_PX4\pi_ros2_ws\docs\protocols\D_UAV_UNIFIED_DEVICE_PROTOCOL_v1.7.md`
 
+> **⚠ 更正说明（追加，未改动下文原文）**
+> 本文 §6.1 与 §7.2 写的 `/fmu/in/vehicle_odometry` **有误**。PX4 的 `dds_topics.yaml` 里 `vehicle_odometry` 只出现在 **publications**（即 `/fmu/out/vehicle_odometry`）；派 → 飞控方向能收 `VehicleOdometry` 的话题只有 **`/fmu/in/vehicle_visual_odometry`** 和 `/fmu/in/vehicle_mocap_odometry`，官方原文 "EKF2 only subscribes to `vehicle_visual_odometry` topics"。发到 `/fmu/in/vehicle_odometry` **不报错但完全无效**（不在白名单的话题在 DDS 里根本不存在）。
+> 另两处口径：§7.2 的 `OffboardControlMode` 50 Hz 建议按官方示例改为 **10 Hz**（硬门槛 ≥2 Hz）；§6.3 / §7.5 的"串级 PID 冲突"应读作**一个必须拍死的架构选择**（offboard 用速度模式则 PX4 位置环不参与，树莓派 PID 是正常分工）。
+> 详见 `PX4伴飞工程计划书.md` §8.5 与 §9.4。
+
 ---
 
 ## 0. 最重要的一条结论（先看这个）

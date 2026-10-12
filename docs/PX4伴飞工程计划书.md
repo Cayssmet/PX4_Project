@@ -372,6 +372,26 @@ PX4 EKF2 融合  ──►  /fmu/out/vehicle_local_position、vehicle_odometry
 - `cartographer_config/package.xml` 里**缺 `tf2_ros` 声明**（launch 里用了 `tf2_ros/static_transform_publisher`）。干净环境 `rosdep install --from-paths src` 会漏装。
 - `uav_bringup/package.xml` 里留着 `ros2_laser_scan_matcher` 的依赖，但那个节点**已经不在 launch 里了**（是死代码）。**不要恢复它**——它会在 `/odom` 话题和 `odom→base_link` TF 上和 Cartographer 正面冲突。
 
+### 8.5 与仓库里已有那份迁移分析的对账（★ 有一处必须纠正）
+
+仓库里 `docs/px4_migration_analysis_flight_controller_bridge.md`（957 行）是一份质量很高的旧工程拆解 + PX4 对照，结论与本计划书**大方向一致**（整体替换 `flight_controller_bridge`、V1/V2 线缆协议全部推翻、QoS 必须改、无位置源进不了 offboard、`COM_RC_OVERRIDE` 默认关闭、`timestamp` 必填微秒）。但有三处必须对账：
+
+**① 硬错误：它写的外部位姿话题名不对。**
+
+该文 §6.1 与 §7.2 两处都写 `/fmu/in/vehicle_odometry`。**PX4 侧没有这个订阅话题。**
+
+- `vehicle_odometry` 在 PX4 的 `dds_topics.yaml` 里只出现在 **`publications`**（即 `/fmu/out/vehicle_odometry`，那是 EKF2 **输出**的估计量）。
+- `subscriptions`（派 → 飞控）里能收 `VehicleOdometry` 的只有两个名字：**`/fmu/in/vehicle_visual_odometry`** 和 `/fmu/in/vehicle_mocap_odometry`。
+- 官方文档原文：**"EKF2 only subscribes to `vehicle_visual_odometry` topics"**。
+
+⇒ 发到 `/fmu/in/vehicle_odometry` **不报错，但什么都不会发生**——不在 `dds_topics.yaml` 白名单里的话题在 DDS 里根本不存在。这是最难查的一类失败。**必须用 `/fmu/in/vehicle_visual_odometry`。**
+
+**② 频率口径**
+
+该文 §7.2 写 `OffboardControlMode` 按 **50 Hz** 发。官方示例是 **10 Hz**（`create_wall_timer(100ms, timer_callback)`），硬门槛只有 **≥2 Hz**。50 Hz 无害但没必要（多占串口带宽、多占飞控 CPU）。**建议按官方 10 Hz。**
+
+**③ 关于"串级 PID 冲突"：它列为"高风险"，本计划书的结论是"这是一个要拍死的选择"** —— 详见 §9.4。只要 offboard 用**速度模式**（`velocity = true`），PX4 的位置环就不参与，树莓派的 PID 是正常分工而非串级叠加。**它不是风险，是一个架构选择。**
+
 ---
 
 ## 9. 下行链路设计：任务指令 → PX4 offboard
@@ -424,7 +444,18 @@ if (offboard_setpoint_counter_ < 11) offboard_setpoint_counter_++;
 
 > **重要细节**：`TrajectorySetpoint` 里**不控制的状态必须填 `NaN`，不能填 0。** 填 0 的意思是"我要你去坐标原点"，不是"不用管"。这是极高频的错误。
 
-**建议路线**：M4/M5 用速度控制把闭环跑通（低风险、好调），M6 之后如果要长距离定点，再切位置控制。
+**★ 必须先拍死的架构选择：位置环放哪一边？**
+
+你旧工程里已经有 `position_pid_controller`（位置误差 → 速度指令 → `/pid/cmd_vel`），PX4 内部也有位置环。**两个位置环叠加 = 串级冲突 = 震荡**，所以必须二选一：
+
+| 选择 | 树莓派做什么 | PX4 做什么 | 上层任务逻辑改动 | 结论 |
+| --- | --- | --- | --- | --- |
+| **A. 位置环留在树莓派** | `position_pid_controller` 照旧算速度；适配层把 `/pid/cmd_vel` 填进 `TrajectorySetpoint.velocity` | offboard **速度模式**：`mc_pos_control` 速度直通，**不生成自己的位置环** | **几乎为零** | ✅ **推荐** |
+| **B. 位置环交给 PX4** | 只发目标点（`TrajectorySetpoint.position`），必须**摘掉** `position_pid_controller` | offboard 位置模式，飞控自己闭环 | 要重写任务层 | 定点更稳，但旧资产作废 |
+
+**关键澄清**：`OffboardControlMode.velocity = true` 时 PX4 **不是**"也在跑位置环"，它是速度直通——把速度设定点直接转成姿态/推力。所以选择 A **不是串级冲突，而是正常分工**。把它说成"高风险"的常见来源，是把"发速度设定点"和"同时发位置设定点"混为一谈了。
+
+**建议路线**：**M4 / M5 / M6 全都先走选择 A（速度控制）**——保留旧资产、改动最小、调试期更宽容。等任务层真的需要长距离航点飞行、且你愿意重写任务逻辑时，再评估切到 B。
 
 ### 9.5 上层的接口怎么设计（保持你的任务逻辑不用改）
 
