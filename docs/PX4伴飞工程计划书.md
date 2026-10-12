@@ -308,7 +308,7 @@ PX4 官方文档原文（`COM_RC_OVERRIDE`）：
 
 也就是说：**默认情况下，一旦进了 offboard，你推遥控器摇杆是没有反应的。** 只有切模式开关才有效。
 
-⇒ **首飞前必须显式打开 `COM_RC_OVERRIDE` 里对应 Offboard 的那一位**，把"摇杆夺权"这条命脉接上。具体位值见 §11.4（**【待核实】**，等参数核实结果补上）。
+⇒ **首飞前必须把 `COM_RC_OVERRIDE` 改成 3。** ✅ 已核实（`commander_params.c:432-446`）：`@bit 0` = auto 模式接管，**`@bit 1` = offboard 模式接管**；默认值是 **1**，也就是说 **offboard 那一位出厂就是关的**。要两处都允许接管就设 **3**。详见 §11.4。
 
 ---
 
@@ -546,14 +546,76 @@ if (offboard_setpoint_counter_ < 11) offboard_setpoint_counter_++;
 
 ### 11.4 安全与失效（★ 首飞前逐条走查）
 
-| 参数 | 建议值 | 为什么 |
+> ✅ 已对 **v1.17.0 源码逐字核实**（源码原件已缓存到 `D:\09_PX4\_px4_v1170\`）。
+
+| 参数 | 建议值 | 源码位置与为什么 |
 | --- | --- | --- |
-| `COM_RC_OVERRIDE` | **必须打开 Offboard 对应的位** | ★ 官方原文："This is not enabled for offboard mode by default." 不打开 = offboard 下推杆没反应。位值 **【待核实】** |
-| `COM_OBL_RC_ACT` | 0（Position） | 断流/切出 offboard 后进入的模式。枚举：`0 Position / 1 Altitude / 2 Manual / 3 Return / 4 Land` |
-| `COM_OF_LOSS_T` | 起手 **1.0 s**，熟练后可放宽到 3~5 s | 断流多久触发 failsafe |
-| `COM_RCL_EXCEPT` | 视需要，若要在 offboard 下忽略遥控丢失则置对应位 | 【待核实】位值 |
-| `NAV_DLL_ACT` | 视是否需要"无地面站也能飞" | ★ 官方警告：**默认情况下没有地面站（QGC）或遥控链路就解锁不了**，所以调试期请保持 QGC 或遥控连接 |
-| `COM_RC_IN_MODE` | 4 可完全禁用摇杆输入 | **不要**在首飞用，会失去人工接管 |
+| `COM_RC_OVERRIDE` | ★ **改成 3** | `src/modules/commander/commander_params.c:432-446`，`PARAM_DEFINE_INT32(COM_RC_OVERRIDE, 1)`，min 0 max 3。**bit0 = 自动模式下允许摇杆接管；bit1 = offboard 模式下允许摇杆接管。默认值 1 = 只开了 bit0，offboard 那位是关的** ⇒ **默认进了 offboard，推杆完全没反应。** 要在 offboard 下也能夺回控制权必须设 **3**。行为原文：*"moving the sticks more than `COM_RC_STICK_OV` immediately gives control back to the pilot by **switching to Position mode**, and if position is unavailable Altitude mode."* 位枚举源码 `Commander.hpp:211-213`（`AUTO_MODE_BIT=(1<<0)`、`OFFBOARD_MODE_BIT=(1<<1)`），使用点 `Commander.cpp:2946`（auto）/ `:2952`（offboard） |
+| `COM_RC_STICK_OV` | 30（默认，单位 %） | `commander_params.c:448-461`，`PARAM_DEFINE_FLOAT(..., 30.0f)`，min 5 max 80。打杆超过这个百分比才触发接管 |
+| `COM_RCL_EXCEPT` | 需要时置 **4** | `commander_params.c:618-633`，default 0，min 0 max 31。位值逐字：`bit0 Mission=1` / `bit1 Hold=2` / **`bit2 Offboard=4`** / `bit3 External Mode=8` / `bit4 Altitude Cruise=16`。置 4 = **offboard 模式下遥控丢失不触发 failsafe**。原文警告：*"External modes requiring stick input will still failsafe."* |
+| `COM_OBL_RC_ACT` | 0（Position） | `commander_params.c:353-369`，default 0。**枚举逐字是 8 个（不是我早前写的 5 个）**：`0 Position mode` / `1 Altitude mode` / `2 Stabilized` / `3 Return` / `4 Land` / `5 Hold` / `6 Terminate` / `7 Disarm`。⚠ **2 是 Stabilized 不是 Manual**；`6 Terminate`、`7 Disarm` 是危险值，别设 |
+| `COM_OF_LOSS_T` | **1.0**（默认，秒） | `commander_params.c:329-340`，`PARAM_DEFINE_FLOAT(..., 1.0f)`，min 0 max 60。**这就是 offboard 断流后多久触发 failsafe。** 原文：*"The offboard loss failsafe will only be entered after a timeout, set by `COM_OF_LOSS_T` in seconds."* 首飞保持 1.0，别放宽 |
+| `NAV_DLL_ACT` | 0（默认，Disabled） | `commander_params.c:580-598`，default 0。枚举 `0 Disabled / 1 Hold / 2 Return / 3 Land / 5 Terminate / 6 Disarm`。★ **这一条修正了官方文档的说法**：`rcAndDataLinkCheck.cpp:80-81` 的判定原文是 `bool gcs_connection_required = _param_nav_dll_act.get() > 0;` ⇒ 默认 0 时 `gcs_connection_required=false`，**没接地面站并不阻止解锁**（只在事件里报一条 Info `"No connection to the ground control station"`）。但你**仍然需要遥控链路** |
+| `COM_RC_IN_MODE` | 3（默认） | `commander_params.c:168-199`，default 3。枚举 `0 RC only / 1 MAVLink only / 2 RC or MAVLink with fallback / 3 RC or MAVLink keep first / 4 Disable manual control / 5~8 各种优先级`。**4 = 完全禁用摇杆输入，首飞绝不能用**（它还会把下面 `modeCheck.cpp:176-179` 的 `"No manual control input"` 从 Warning 升成 Error） |
+| `COM_ARMABLE` | 1（默认） | `commander_params.c:980`，`0 Disallow arming / 1 Allow arming`。被置 0 时 `armPermissionCheck.cpp:38-53` 报 `"Vehicle is in safety configuration"` |
+| `COM_ARM_WO_GPS` | 1（默认） | `commander_params.c:255`，`0 Deny arming / 1 Warning only / 2 Disabled`。室内无 GPS 场景 1 正好——警告但不阻止 |
+| `COM_LOW_BAT_ACT` | 0（默认） | `commander_params.c:293`，`0 Warning / 2 Land mode / 3 Return at critical level, land at emergency level`。**你没有电源模块，这条暂时无效** |
+| `COM_DISARM_PRFLT` | 10.0 s（默认） | `commander_params.c:243`。解锁后无操作多久自动上锁 |
+| `COM_DISARM_LAND` | 2.0 s（默认） | `commander_params.c:227`。落地后多久自动上锁 |
+| `COM_KILL_DISARM` | 5.0 s（默认） | `commander_params.c:747` |
+| `COM_ARM_CHK_ESCS` | 0（默认） | `commander_params.c:699`。v1.17.0 **只有这一个 `COM_ARM_CHK_*`**，**没有** `COM_ARM_CHK_GPS` 之类 |
+| `COM_ARM_AUTH_REQ`/`_ID`/`_MET`/`_TO` | 0 / 10 / 0 / 1（默认） | `commander_params.c:481` / `:490` / `:506` / `:519`。双人授权解锁，默认关闭 |
+| `COM_ARM_IMU_ACC`/`_GYR`、`COM_ARM_MAG_ANG`/`_STR` | 0.7 / 0.25 / 60 / 2（默认） | `commander_params.c:392` / `:404` / `:416` / `:430` |
+
+#### ★ 同一个 Offboard，有三个不同的数字——别混
+
+| 场合 | 编号 | 出处 |
+| --- | --- | --- |
+| MAVLink `VEHICLE_CMD_DO_SET_MODE` 的 **`param2`** | **6** | MAVLink 的 `PX4_CUSTOM_MAIN_MODE_OFFBOARD = 6`。官方 ROS 2 示例就是 `VEHICLE_CMD_DO_SET_MODE, 1, 6` |
+| `VEHICLE_CMD_SET_NAV_STATE` 的 `param1` = `nav_state`（也就是 `/fmu/out/vehicle_status.nav_state`） | **14** | `msg/versioned/VehicleStatus.msg` |
+| QGC 飞行模式槽位 / `COM_FLTMODE1~6` 参数枚举 | **7** | `src/modules/commander/module.yaml:18-52`：`0 Manual / 1 Altitude / 2 Position / 9 Position Slow / 3 Mission / 4 Hold / 10 Takeoff / 11 Land / 5 Return / 6 Acro / 7 Offboard / 8 Stabilized / 12 Follow Me / 13 Precision Land / 16 Altitude Cruise / 100~107 External Mode 1~8 / -1 Unassigned`；**`COM_FLTMODE1~6` 默认全部是 −1（Unassigned）** |
+
+⇒ **MAVLink 发 6，读状态看 14，QGC 里选的是 7。**
+
+#### 室内无 GPS 时切 offboard 到底被哪一条挡下（已定位到源码）
+
+`src/modules/commander/HealthAndArmingChecks/checks/` 下共 **35 个检查**。**没有 `localPositionCheck.cpp`**（我早前的猜测是错的）——位置估计检查就叫 **`estimatorCheck.cpp`**，另有 `homePositionCheck.cpp`。你会在 QGC 消息栏看到的原文与等级：
+
+| 报错文本（逐字） | 源码位置 | 等级 | 触发条件 |
+| --- | --- | --- | --- |
+| `"No offboard signal"` | `modeCheck.cpp:144-153`，并 `clearCanRunBits(mode_req_offboard_signal)` | Error | ★ **最常见**。块注释原文：*"The offboard component is not sending setpoints or the required estimate (e.g. position) is missing."* ⇒ 要么心跳没发，要么位置估计无效 |
+| `"Navigation error: No valid position estimate"` | `modeCheck.cpp:85`（外层 `if` 在 83 行） | Error | `failsafe_flags.local_position_invalid` 为真。**室内无 GPS 无光流切 offboard，就是被这一条 + 上面那条挡下** |
+| `"Navigation error: No valid altitude estimate"` | `modeCheck.cpp:117-120` | **Critical** | 高度估计无效 |
+| `"No valid attitude estimate"` | `modeCheck.cpp:61-64` | **Critical** | 姿态无效 |
+| `"Angular velocity not valid"` | `modeCheck.cpp:50-53` | **Critical** | 角速度无效 |
+| `"Navigation error: No valid global position estimate"` | `modeCheck.cpp:100-110` | Error | 需要全局位置且无效 |
+| `"No manual control input"` | `modeCheck.cpp:176-179` | Warning（`COM_RC_IN_MODE==4` 时升为 Error） | 没有遥控输入 |
+| `"Home position not set"` | `modeCheck.cpp:158-161` | Info | 室内无 GPS 会有这条，但只是 Info，不挡 |
+| `"Position estimate has low accuracy"` | `estimatorCheck.cpp:637` | Error | `eph` 超阈值 |
+| `"Vehicle is in safety configuration"` | `armPermissionCheck.cpp:38-53` | Error | `COM_ARMABLE < 1` |
+| `"Estimated position error is approaching the failsafe threshold"` | `estimatorCheck.cpp:707-718` | Error | 由 `cs_inertial_dead_reckoning`（`EstimatorStatusFlags.msg:36`）+ `cs_wind_dead_reckoning`（`:37`）合成，见 `estimatorCheck.cpp:701-702` |
+
+**排障时直接查的三个判定点**
+
+1. **本地位置无效的准确算法**在 `estimatorCheck.cpp:733-735`：
+   ```cpp
+   failsafe_flags.local_position_invalid =
+       !checkPosVelValidity(now, xy_valid, lpos.eph, lpos_eph_threshold, lpos.timestamp,
+                    _last_lpos_fail_time_us, !failsafe_flags.local_position_invalid);
+   ```
+   阈值 `lpos_eph_threshold = (COM_POS_FS_EPH < 0) ? INFINITY : COM_POS_FS_EPH`（`:664`），**`COM_POS_FS_EPH` 默认 5.0 m**（`commander_params.c:538`），带 **2.5× 迟滞**（`:803`）。
+2. **offboard 通道自身的监控**在 `offboardCheck.cpp:40-66`：它**不报消息**，只写 `offboard_control_signal_lost`。`:53-62` 表明 —— `OffboardControlMode.position=true` 要求 `local_position_invalid==false`；`velocity=true` 要求 `local_velocity_invalid==false`；`acceleration=true` 要求 `attitude_invalid==false`。超时时间就是 `COM_OF_LOSS_T`。
+   ⇒ **这就是"为什么 M3 位置源必须先于 M4 offboard"的源码级证据。**
+3. **拒绝换模式的入口**：`ModeManagement::getModeStatus(uint32_t &valid_nav_state_mask, uint32_t &can_set_nav_state_mask) const`（`ModeManagement.cpp:631`，被 `Commander.cpp:1943` 调用）；真正清位的是 `ModeChecks::checkAndReport(const Context&, Report&)`（`modeCheck.cpp:36`，`clearCanRunBits` 见 53/64/86/109/120/141/152/161/181/186/192 行）。模式替换：`ModeManagement::getNavStateReplacementIfValid`（`:437`）、`getReplacedModeIfAny`（`:463`）。
+4. **解锁入口与总门禁**：`Commander::arm(arm_disarm_reason_t calling_reason, bool run_preflight_checks)`（`Commander.cpp:549`），健康门在 `:610-618`：
+   ```cpp
+   610:  _health_and_arming_checks.update(false, true);
+   612:  if (!_health_and_arming_checks.canArm(_vehicle_status.nav_state)) {
+   614:      mavlink_log_critical(&_mavlink_log_pub, "Arming denied: Resolve system health failures first\t");
+   617:      return TRANSITION_DENIED;
+   ```
+   运行时判定在 `:1869-1874`，结果写进 `_vehicle_status.pre_flight_checks_pass`；`:1920` `_actuator_armed.ready_to_arm = _vehicle_status.pre_flight_checks_pass || isArmed();`
+   ⇒ **`vehicle_command_ack` 返回被拒时，QGC 消息栏一定有条 `"Arming denied: ..."` 或上面表格里的具体检查项，照着查。**
 
 ### 11.5 `nav_state` 枚举对照（调试时必须会看，逐字核实）
 
@@ -773,7 +835,7 @@ CH340 USB-TTL 转接板
 2. 先只发"速度为 0"的设定点。
 3. 第 10 次心跳后发 `DO_SET_MODE(1, 6)` + 解锁。
 4. ★ **拆掉螺旋桨**，在桌上跑。
-5. 打开 `COM_RC_OVERRIDE` 里 Offboard 对应的位；`COM_OF_LOSS_T = 1.0`。
+5. **`COM_RC_OVERRIDE` 改成 3**（`bit1` = offboard 接管位，默认值 1 不含它）；`COM_OF_LOSS_T` 保持 **1.0 s**。
 
 **判据**
 - `/fmu/out/vehicle_status`：`nav_state = 14`（OFFBOARD）、`arming_state = 2`（ARMED）
@@ -840,7 +902,7 @@ CH340 USB-TTL 转接板
 | # | 风险 | 后果 | 对策 |
 | --- | --- | --- | --- |
 | R1 | **坐标系换算错误** | 一解锁就朝错误方向冲出去 | M3 手持逐条验收（§14 M3 表）；只允许一处换算函数 |
-| R2 | **offboard 下打杆夺不回控制权** | 失控 | 首飞前显式打开 `COM_RC_OVERRIDE` 的 Offboard 位 |
+| R2 | **offboard 下打杆夺不回控制权** | 失控 | 首飞前把 `COM_RC_OVERRIDE` **改成 3**（`bit1` 才是 Offboard 位，默认值 1 不含它） |
 | R3 | 没有位置估计就切 offboard | 静默无效，白忙 | 先做 M3，用 `cs_ev_pos` 做硬门禁 |
 | R4 | `quality` 填 0 导致 EKF2 拒绝 | 外部视觉完全不生效 | 有效时填 100 |
 | R5 | 心跳断流 | 飞控切出 offboard（可能掉高度） | 心跳和设定点同一个 10 Hz 定时器，永不缺席；`COM_OF_LOSS_T` 先设 1 s |
@@ -861,12 +923,12 @@ CH340 USB-TTL 转接板
 | # | 待核实项 | 影响 | 状态 |
 | --- | --- | --- | --- |
 | Q1 | ~~`UXRCE_DDS_CFG` 的枚举值表与波特率设置位置~~ **✅ 已解决** | M1 全部 | **已解决**：枚举值不用记（QGC 按名称选 TELEM2）。波特率位置已定位——模块启动行 `-b p:${BAUD_PARAM}`，`${BAUD_PARAM}` 展开为 `SER_TEL2_BAUD`，**必须显式设 921600** |
-| Q2 | `COM_RC_OVERRIDE` 的完整位值表（Offboard 是第几位） | **安全关键** | 核实中 |
-| Q3 | `COM_RCL_EXCEPT` 的位值表 | 安全 | 核实中 |
+| Q2 | ~~`COM_RC_OVERRIDE` 的完整位值表（Offboard 是第几位）~~ **✅ 已解决** | **安全关键** | **已解决**：`commander_params.c:432-446`，default **1**，min 0 max 3；`bit0`=auto 接管、**`bit1`=offboard 接管**。默认只开 bit0 ⇒ **必须改成 3**，否则 offboard 下推杆没反应 |
+| Q3 | ~~`COM_RCL_EXCEPT` 的位值表~~ **✅ 已解决** | 安全 | **已解决**：`commander_params.c:618-633`，default 0，min 0 max 31；`bit0 Mission / bit1 Hold / bit2 Offboard(=4) / bit3 External Mode / bit4 Altitude Cruise` |
 | Q4 | ~~`EKF2_HGT_REF` 在 v1.17.0 是否仍存在~~ **✅ 已解决**：仍在，`src/modules/ekf2/module.yaml:87-104`，enum `0 Barometric / 1 GPS / 2 Range sensor / 3 Vision`，**default 1(GPS)** | M3 | **已解决（有残留项）**：残留 = C++ 消费端（`EKF2.cpp` / `EKF/height_control.cpp`）未读，不能排除"YAML 定义了但代码已忽略" |
 | Q5 | `MPC_ALT_MODE` 的完整枚举与室内推荐值 | M5 定高 | 核实中 |
 | Q6 | `MPC_*` 位置/速度环参数逐条定义与室内推荐值 | M5 | 核实中 |
-| Q7 | 解锁被拒时 commander 具体报哪条检查失败、阈值参数名 | M4 排障 | 核实中 |
+| Q7 | ~~解锁被拒时 commander 具体报哪条检查失败、阈值参数名~~ **✅ 已解决** | M4 排障 | **已解决**：见 §11.4 的报错对照表（11 条逐字消息 + 源码行 + 等级）。关键阈值 `COM_POS_FS_EPH` 默认 **5.0 m**（`commander_params.c:538`，判定在 `estimatorCheck.cpp:733`，2.5× 迟滞在 `:803`）；总门禁 `Commander.cpp:610-618`，拒绝时必打 `"Arming denied: Resolve system health failures first"`。`COM_OBL_ACT` / `COM_OBL_TIMEOUT` 在 v1.17.0 **不存在**；`localPositionCheck.cpp` **不存在**（位置检查=`estimatorCheck.cpp`）；`COM_ARM_CHK_*` 只有 `COM_ARM_CHK_ESCS` |
 | Q8 | 镭神 N10 的**串口版硬件**接线定义、供电电压（波特率已确认 230400） | M3 接线 | 需你翻随货资料包 |
 | Q9 | 雷达的实际外参（相对重心的 x/y/z、安装俯仰） → `EKF2_EV_POS_X/Y/Z` | M5 精度 | 需实测 |
 
