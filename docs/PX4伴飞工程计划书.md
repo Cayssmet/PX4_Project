@@ -641,11 +641,138 @@ if (offboard_setpoint_counter_ < 11) offboard_setpoint_counter_++;
 
 `arming_state`：**1 = DISARMED，2 = ARMED**。
 
-### 11.6 控制限幅（M5 起调，建议室内先降下来）
+### 11.6 控制限幅与位置环参数（M5 起调）
 
-`MPC_XY_VEL_MAX`、`MPC_Z_VEL_MAX_UP/DN`、`MPC_ACC_HOR`、`MPC_TILTMAX_AIR`、`MPC_ALT_MODE`（**室内定高的关键**）等。
+> ✅ 已对 **v1.17.0 源码逐字核实**。★ **v1.17.0 的 `mc_pos_control` 没有 `params_*.yaml`**，参数按主题拆成 10 个 `.c` 文件；只翻 YAML 是找不到的。
 
-> 这一组的逐条定义与室内推荐值 **【待核实中】**，本轮已派出核实任务，结果会补进本节。
+**参数文件全路径**（都在 `src/modules/mc_pos_control/`）：`multicopter_position_control_limits_params.c` · `..._gain_params.c` · `multicopter_position_control_params.c` · `multicopter_altitude_mode_params.c` · `multicopter_position_mode_params.c` · `multicopter_autonomous_params.c` · `multicopter_takeoff_land_params.c` · `multicopter_nudging_params.c` · `multicopter_responsiveness_params.c` · `multicopter_stabilized_mode_params.c`。
+
+#### ★★ 先说一个推翻性发现：`MPC_ALT_MODE` 对 offboard **完全无效**
+
+| 事实 | 证据 |
+| --- | --- |
+| `MPC_ALT_MODE` 只在 `MulticopterPositionControl.hpp:171` **声明**了一下 | `(ParamInt<px4::params::MPC_ALT_MODE>) _param_mpc_alt_mode,` |
+| `mc_pos_control/MulticopterPositionControl.cpp`（797 行）与 `PositionControl/PositionControl.cpp`（271 行）里 `mpc_alt_mode` / `dist_bottom` / `hagl` **命中 0** | 逐行核对 |
+| `flight_mode_manager/tasks/Auto/FlightTaskAuto.cpp`（848 行）同样 **0 命中** | 逐行核对 |
+| 真正消费它的是 **`flight_mode_manager/tasks/ManualAltitude/FlightTaskManualAltitude.cpp:111` / `:152`** | `if (_param_mpc_alt_mode.get() == 2) {` / `if ((_param_mpc_alt_mode.get() == 1 \|\| _terrain_hold) && PX4_ISFINITE(_dist_to_bottom)) {` |
+
+参数本身（`multicopter_altitude_mode_params.c:73-91`，**默认 `2`**）：`0 = Altitude following`（相对地球系原点，会随传感器漂移）/ `1 = Terrain following`（相对地面，需测距仪，估计失效则回退地球系）/ `2 = Terrain hold`（**静止时**相对地面、**水平移动时**相对地球系，速度阈值 = `MPC_HOLD_MAX_XY`）。
+
+⇒ **结论：`MPC_ALT_MODE` 只管手动/Altitude 模式；我们走 offboard（auto 路径），它可以随便设，不影响 offboard 的高度行为。offboard 下高度一律相对本地 NED 原点。** 室内想用测距做"相对地面高度"，正确的手段是 EKF2 侧（`EKF2_HGT_REF` / `EKF2_RNG_CTRL`），**不是** `MPC_ALT_MODE`。
+> HAGL 的来源确认：`flight_mode_manager/tasks/FlightTask/FlightTask.cpp:157-159` —— 只有当 `vehicle_local_position.dist_bottom_valid == true` 且 `PX4_ISFINITE(dist_bottom)` 时才用它。
+
+#### `MPC_POS_MODE`：只有两个值，且 **0 号是给速度环调参用的**
+
+`multicopter_position_mode_params.c:34-49`，**默认 `4`**：
+- **`0 = Direct velocity`** —— 原文："Sticks directly map to velocity setpoints **without smoothing**. Also applies to vertical direction and Altitude mode. **Useful for velocity control tuning.**"
+- `4 = Acceleration based` —— 默认值。
+
+⇒ ★ **我们做速度环调试时（M5 早期）把它设成 `0`**，让 PX4 直通速度设定点、不加平滑，这样调的是"我们 + PX4 速度环"，不受轨迹生成器干扰。稳定后再切回 `4`。
+（v1.17.0 **没有 1 / 2 / 3**。`MPC_ACC_HOR_MAX` 的 long 原文里那句 "`4 not used, use MPC_ACC_HOR instead`" 就是指 `MPC_POS_MODE=4`。）
+
+#### 室内推荐值（相对出厂默认）
+
+| 参数 | 默认 | 室内建议 | 源码 |
+| --- | --- | --- | --- |
+| `MPC_XY_VEL_MAX` | 12 m/s | **2.0** | `..._limits_params.c:47`（max 20） |
+| `MPC_Z_VEL_MAX_UP` | 3 m/s | **1.0** | `:64` |
+| `MPC_Z_VEL_MAX_DN` | 1.5 m/s | **0.5** | `:81` |
+| `MPC_TILTMAX_AIR` | 45° | **25** | `:96`，"Absolute maximum for all velocity or acceleration controlled modes. Any higher value is truncated." |
+| `MPC_TILTMAX_LND` | 12° | 12（别动） | `:110`，"Tighter tilt limit during takeoff to avoid tip over." |
+| `MPC_XY_CRUISE` | 5 m/s | 1.5 | `multicopter_autonomous_params.c:46` |
+| `MPC_ACC_HOR` | 3 m/s² | 1.5 | `autonomous_params.c:88`（min 2 ⚠ 低于 2 要确认能否设） |
+| `MPC_ACC_UP_MAX` / `MPC_ACC_DOWN_MAX` | 4 / 3 | 别动 | `multicopter_altitude_mode_params.c:44` / `:56` |
+| `MPC_JERK_MAX` | 8 m/s³ | 别动 | `multicopter_position_mode_params.c:131`（"Setting this to the maximum value essentially disables the limit."） |
+| `MPC_JERK_AUTO` | 4 m/s³ | 别动 | `autonomous_params.c:103` |
+| `MPC_THR_HOVER` | 0.5 | **只有悬停推力明显不对时才动** | `multicopter_position_control_params.c:49`。long 原文："**The hover thrust is important for land detection to work correctly.**" |
+| `MPC_USE_HTE` | 1 | 别动 | `..._position_control_params.c:60` |
+| `MPC_VELD_LP` | 5.0 Hz | 别动 | `:132` |
+
+**增益表（默认就是官方调好的，先别动；只在出现明确振荡时才碰）** —— `multicopter_position_control_gain_params.c`：
+
+| 参数 | 默认 | min~max | 行 |
+| --- | --- | --- | --- |
+| `MPC_XY_P` | 0.95 | 0~2 | :58 |
+| `MPC_XY_VEL_P_ACC` | 1.8 | 1.2~5 | :84 |
+| `MPC_XY_VEL_I_ACC` | 0.4 | 0~60 | :111 |
+| `MPC_XY_VEL_D_ACC` | 0.2 | 0.1~2 | :137 |
+| `MPC_Z_P` | 1.0 | 0.1~1.5 | :45 |
+| `MPC_Z_VEL_P_ACC` | 4.0 | 2~15 | :71 |
+| `MPC_Z_VEL_I_ACC` | 2.0 | 0.2~3 | :97 |
+| `MPC_Z_VEL_D_ACC` | 0.0 | 0~2 | :124 |
+
+#### ★ `MPC_XY_VEL_ALL` / `MPC_Z_VEL_ALL`：「一键限速」，但会**偷偷改写一串参数**
+
+`multicopter_responsiveness_params.c:65` / `:80`，默认 **−10** / **−3**（**负值 = 不覆盖**）。一旦设成正值，`MulticopterPositionControl.cpp:151-167` 会**自动改写**：
+
+```
+151: if (_param_mpc_xy_vel_all.get() >= 0.f) {
+153:   num_changed += _param_mpc_vel_manual.commit_no_notification(xy_vel);
+154:   num_changed += _param_mpc_vel_man_back.commit_no_notification(-1.f);
+155:   num_changed += _param_mpc_vel_man_side.commit_no_notification(-1.f);
+156:   num_changed += _param_mpc_xy_cruise.commit_no_notification(xy_vel);
+157:   num_changed += _param_mpc_xy_vel_max.commit_no_notification(xy_vel);
+160: if (_param_mpc_z_vel_all.get() >= 0.f) {
+162:   num_changed += _param_mpc_z_v_auto_up.commit_no_notification(z_vel);
+163:   num_changed += _param_mpc_z_vel_max_up.commit_no_notification(z_vel);
+164:   num_changed += _param_mpc_z_v_auto_dn.commit_no_notification(z_vel * 0.75f);
+165:   num_changed += _param_mpc_z_vel_max_dn.commit_no_notification(z_vel * 0.75f);
+166:   num_changed += _param_mpc_tko_speed.commit_no_notification(z_vel * 0.6f);
+167:   num_changed += _param_mpc_land_speed.commit_no_notification(z_vel * 0.5f);
+```
+
+⇒ 好处是"一个参数整体降速"；**代价是它顺手把 `MPC_LAND_SPEED` 也改了**（`0.5 × MPC_Z_VEL_ALL`），而降落速度又会被下面那条自动检查拿来压低 `LNDMC_Z_VEL_MAX`。**要么用这两个参数、要么逐条改，别混着来。**
+
+#### 降落检测：v1.17.0 只剩 **5 个**参数
+
+`src/modules/land_detector/land_detector_params_mc.c`：`LNDMC_TRIG_TIME` **1.0 s**(:48) · `LNDMC_Z_VEL_MAX` **0.25 m/s**(:64) · `LNDMC_XY_VEL_MAX` **1.5 m/s**(:76) · `LNDMC_ROT_MAX` **20 deg/s**(:88) · `LNDMC_ALT_GND` **2 m**(:102)。
+
+⚠ **旧名字全部不存在**：`LNDMC_THR_RANGE`、`LNDMC_ALT_MAX`、`LNDMC_EF_Z`、`LNDMC_EF_XY_MAX`、`LNDMC_POS_UP_DOWN`、`LNDMC_MAN_DWN_THR`、`LNDMC_LOW_T_THR`、`LNDMC_FFALL_THR`、`LNDMC_FFALL_TTRI`、`LNDMC_BCS_THR` —— **v1.17.0 一个都没有**（固定翼对应物是 `LNDFW_*`）。多旋翼 land detector 也没有任何枚举型参数。
+
+★ **有一条会自己改参数的自动检查**（`MulticopterLandDetector.cpp:126-134`）：
+
+```cpp
+127: const float lndmc_upper_threshold = math::min(_params.crawlSpeed, _params.landSpeed) / 1.2f;
+129: if (_param_lndmc_z_vel_max.get() > lndmc_upper_threshold) {
+130:   PX4_ERR("LNDMC_Z_VEL_MAX > MPC_LAND_CRWL or MPC_LAND_SPEED, updating %.3f -> %.3f", ...);
+133:   _param_lndmc_z_vel_max.set(lndmc_upper_threshold);
+```
+
+⇒ 出厂 `LNDMC_Z_VEL_MAX = 0.25` 正好等于 `min(MPC_LAND_CRWL=0.3, MPC_LAND_SPEED=0.7)/1.2 = 0.25`。**你一改 `MPC_LAND_SPEED` 或 `MPC_LAND_CRWL`，`LNDMC_Z_VEL_MAX` 会被自动改掉并打一条 `PX4_ERR`。** 看到这条日志不是故障。
+（三阶段 hysteresis 各占 `LNDMC_TRIG_TIME / 3`，见 `:318-320`。）
+
+降落的三个高度阈值都在 `multicopter_takeoff_land_params.c`：`MPC_LAND_ALT1` **10 m**(:72) · `MPC_LAND_ALT2` **5 m**(:87) · `MPC_LAND_ALT3` **1 m**(:101，"limit descending velocity to `MPC_LAND_CRWL` below this altitude"，需测距有效) · `MPC_LAND_SPEED` **0.7 m/s**(:111) · `MPC_LAND_CRWL` **0.3 m/s**(:123)。`MPC_LAND_RC_HELP` 默认 0（`multicopter_nudging_params.c:34-51`），long 里提醒 *"Manual override during auto modes has to be disabled to use this feature (see `COM_RC_OVERRIDE`)"* —— **和我们把 `COM_RC_OVERRIDE` 设成 3 有交互，别同时开。**
+
+#### ★ 位置估计丢失时 PX4 到底干什么（**不是原地悬停**）
+
+`src/modules/commander/failsafe/failsafe.cpp:659-705`（`Failsafe::checkModeFallback`）逐字逻辑：
+
+```cpp
+665: if (status_flags.offboard_control_signal_lost && (status_flags.mode_req_offboard_signal & (1u << user_intended_mode))) {
+666:   action = fromOffboardLossActParam(_param_com_obl_rc_act.get(), user_intended_mode);
+669:   if (action == Action::Disarm) { return action; }
+675:   if (status_flags.manual_control_signal_lost) {
+676:     ActionOptions rc_loss_action = fromNavDllOrRclActParam(_param_nav_rcl_act.get());
+677:     action = rc_loss_action.action;
+684: if ((user_intended_mode == NAVIGATION_STATE_POSCTL || user_intended_mode == NAVIGATION_STATE_POSITION_SLOW)
+686:     && !modeCanRun(status_flags, user_intended_mode)) {
+687:   action = Action::FallbackAltCtrl;   user_intended_mode = NAVIGATION_STATE_ALTCTL;
+692: if (user_intended_mode == NAVIGATION_STATE_ALTCTL && !modeCanRun(status_flags, user_intended_mode)) {
+694:   action = Action::FallbackStab;      user_intended_mode = NAVIGATION_STATE_STAB;
+699: if (!modeCanRun(status_flags, user_intended_mode)) {
+700:   action = Action::RTL;               user_intended_mode = NAVIGATION_STATE_AUTO_RTL;
+```
+
+⇒ **降级链是 `PosCtrl/PositionSlow → AltCtrl → Stab → RTL`**，逐级用 `modeCanRun()` 判。降到 `AltCtrl` 时**只锁高度、水平不再闭环 → 会漂**。
+
+★ **对我们是一条真实风险**：末级 fallback 在源码里是**写死的 RTL**（`:699-702`），而 RTL 需要**全局位置**——室内无 GPS 时它可能同样跑不起来。**M4/M5 必须实测一次"offboard 中拔掉串口线，看它最终切到哪个 nav_state"**，不要假设它会悬停。
+相关参数：`NAV_RCL_ACT` 默认 **2**（Return，`commander_params.c:616`）；`COM_POS_LOW_ACT` 默认 **3**（`commander_params.c:968`，触发在 `failsafe.cpp:549`，注释原文 *"only in auto mission and auto loiter"*）。
+⚠ **`COM_POSCTL_NAV` 在 v1.17.0 不存在**，已被 failsafe flags 机制取代（我早前把它列进待核实清单是错的）。
+
+#### ⚠ 一处上游自身的不一致（老实标注）
+
+v1.17.0 的 `MulticopterLandDetector.cpp:202-203` 用的成员名是 **`_param_lndmc_alt_gnd_effect`**，但参数文件 `land_detector_params_mc.c:102` 定义的却是 **`LNDMC_ALT_GND`**。我**绕过 ghproxy 缓存、直连 `raw.githubusercontent.com` 复核过这三份文件**，内容就是这样。
+⇒ 说明要么存在一个我没能定位到的 `LNDMC_ALT_GND_EFFECT` 定义（`.hpp` 在该路径 404、`api.github.com` 返回 403，无法列目录定案），要么是上游自己的遗留命名。**落定时以 QGC 参数搜索框里实际出现的名字为准，别照着这份文档写死。**
 
 ### 11.7 数据在哪看（派侧的"仪表盘"）
 
@@ -926,8 +1053,8 @@ CH340 USB-TTL 转接板
 | Q2 | ~~`COM_RC_OVERRIDE` 的完整位值表（Offboard 是第几位）~~ **✅ 已解决** | **安全关键** | **已解决**：`commander_params.c:432-446`，default **1**，min 0 max 3；`bit0`=auto 接管、**`bit1`=offboard 接管**。默认只开 bit0 ⇒ **必须改成 3**，否则 offboard 下推杆没反应 |
 | Q3 | ~~`COM_RCL_EXCEPT` 的位值表~~ **✅ 已解决** | 安全 | **已解决**：`commander_params.c:618-633`，default 0，min 0 max 31；`bit0 Mission / bit1 Hold / bit2 Offboard(=4) / bit3 External Mode / bit4 Altitude Cruise` |
 | Q4 | ~~`EKF2_HGT_REF` 在 v1.17.0 是否仍存在~~ **✅ 已解决**：仍在，`src/modules/ekf2/module.yaml:87-104`，enum `0 Barometric / 1 GPS / 2 Range sensor / 3 Vision`，**default 1(GPS)** | M3 | **已解决（有残留项）**：残留 = C++ 消费端（`EKF2.cpp` / `EKF/height_control.cpp`）未读，不能排除"YAML 定义了但代码已忽略" |
-| Q5 | `MPC_ALT_MODE` 的完整枚举与室内推荐值 | M5 定高 | 核实中 |
-| Q6 | `MPC_*` 位置/速度环参数逐条定义与室内推荐值 | M5 | 核实中 |
+| Q5 | ~~`MPC_ALT_MODE` 的完整枚举与室内推荐值~~ **✅ 已解决（结论出乎意料）** | M5 定高 | **已解决**：`multicopter_altitude_mode_params.c:73-91`，**default 2**，enum `0 Altitude following / 1 Terrain following / 2 Terrain hold`。★ **但这个参数对 offboard 完全无效** —— `mc_pos_control` 里只有声明（`.hpp:171`）没有使用，真正消费它的是 `flight_mode_manager/tasks/ManualAltitude/FlightTaskManualAltitude.cpp:111/:152`，即**只作用于手动/Altitude 模式**。offboard 下高度一律相对本地 NED 原点。室内要"相对地面高度"应走 EKF2（`EKF2_HGT_REF`/`EKF2_RNG_CTRL`） |
+| Q6 | ~~`MPC_*` 位置/速度环参数逐条定义与室内推荐值~~ **✅ 已解决** | M5 | **已解决**：见 §11.6（限幅表 + 增益表 + `MPC_POS_MODE` 只有 0/4 + `MPC_XY_VEL_ALL`/`MPC_Z_VEL_ALL` 的一键改写机制 + land detector 只剩 5 个参数 + 位置估计丢失的降级链源码）。残留待实测：**offboard 中拔串口线后最终切到哪个 `nav_state`**（末级 fallback 源码写死 RTL，而 RTL 需全局位置） |
 | Q7 | ~~解锁被拒时 commander 具体报哪条检查失败、阈值参数名~~ **✅ 已解决** | M4 排障 | **已解决**：见 §11.4 的报错对照表（11 条逐字消息 + 源码行 + 等级）。关键阈值 `COM_POS_FS_EPH` 默认 **5.0 m**（`commander_params.c:538`，判定在 `estimatorCheck.cpp:733`，2.5× 迟滞在 `:803`）；总门禁 `Commander.cpp:610-618`，拒绝时必打 `"Arming denied: Resolve system health failures first"`。`COM_OBL_ACT` / `COM_OBL_TIMEOUT` 在 v1.17.0 **不存在**；`localPositionCheck.cpp` **不存在**（位置检查=`estimatorCheck.cpp`）；`COM_ARM_CHK_*` 只有 `COM_ARM_CHK_ESCS` |
 | Q8 | 镭神 N10 的**串口版硬件**接线定义、供电电压（波特率已确认 230400） | M3 接线 | 需你翻随货资料包 |
 | Q9 | 雷达的实际外参（相对重心的 x/y/z、安装俯仰） → `EKF2_EV_POS_X/Y/Z` | M5 精度 | 需实测 |
