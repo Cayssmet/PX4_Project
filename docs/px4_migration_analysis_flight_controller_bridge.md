@@ -792,7 +792,7 @@ status.land_completed = status.landed && status.action_completed;
 ## 6. 问题 6：与 PX4 1.17.0 + uXRCE-DDS Offboard 逐条对照
 
 > 本机已有权威参考（**就是这套 PX4 1.17 的现场笔记**）：
-> `D:\09_PX4\PX4树莓派伴飞实战路线.md`、`D:\09_PX4\PX4学习记录总结_至2026-10-06.md`。
+> `docs/PX4树莓派伴飞实战路线.md`、`docs/PX4学习记录总结_至2026-10-06.md`（已随 2026-08-04 的整理并入本仓库 `docs/`）。
 > 下列 PX4 话题名与消息类型与这两份笔记一致（uORB 消息名 PascalCase，ROS 话题名 snake_case）。
 
 ### 6.1 PX4 有直接对应（给出 ROS 2 话题）
