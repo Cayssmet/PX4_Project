@@ -516,7 +516,8 @@ if (offboard_setpoint_counter_ < 11) offboard_setpoint_counter_++;
 
 | 参数 | 建议值 | 作用 |
 | --- | --- | --- |
-| `UXRCE_DDS_CFG` | 选 **TELEM2**（枚举值 **【待核实】**，以 QGC 下拉框为准） | XRCE 客户端走哪个串口 |
+| `UXRCE_DDS_CFG` | 选 **TELEM2**（在 QGC 下拉框里**按名称选**，不用记枚举值） | XRCE 客户端走哪个串口。源码 `src/modules/uxrce_dds_client/module.yaml` 的 `serial_config.port_config_param.name` 就是它 |
+| **所选串口的波特率**（QGC 标签 "TELEM2 Baudrate"，参数名 **`SER_TEL2_BAUD`**） | **921600** | ★ **必须显式改，这是 M1 最容易漏的一项。** 模块启动行原文：`set UXRCE_DDS_ARGS "-t serial -d ${SERIAL_DEV} -b p:${BAUD_PARAM}"`，`${BAUD_PARAM}` 会展开成**所选串口的波特率参数名**——选 TELEM2 就吃 `SER_TEL2_BAUD`。默认一般只有 57600，与 Agent 的 `-b 921600` 不一致时**一个 topic 都收不到，且不报错** |
 | `MAV_1_CONFIG` | **0** | ★ 官方默认 **MAV_1 = TELEM2** 给伴飞电脑发 MAVLink。**必须禁掉，否则和 XRCE 抢同一个串口**。原文："Disable by setting `MAV_0_CONFIG=0` or `MAV_1_CONFIG=0` to zero." |
 | `UXRCE_DDS_SYNCT` | **1**（默认，别动） | 时间戳同步。关了的话派的时间戳进不了飞控时基 |
 | `UXRCE_DDS_DOM_ID` | 0（默认） | DDS 域，和派上的 `ROS_DOMAIN_ID` 一致 |
