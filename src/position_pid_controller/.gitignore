@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+
+# 如果有人误在 package 目录内构建，也不要提交 ROS 2 生成物。
+build/
+install/
+log/

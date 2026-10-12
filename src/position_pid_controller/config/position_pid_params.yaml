@@ -1,0 +1,130 @@
+position_pid_controller:
+  ros__parameters:
+    # ================================================================
+    # 初始目标值
+    # ================================================================
+    # 单位：x、y 为米，yaw 为弧度。
+    # 节点启动后可以通过 /pid/target_pose 发送新目标覆盖这里的值。
+    target_x: 0.0
+    target_y: 0.0
+    target_yaw: 0.0
+
+    # ================================================================
+    # x 轴位置 PID：x 位置误差 -> 地图坐标系 vx
+    # ================================================================
+    x_kp: 0.35
+    x_ki: 0.0
+    x_kd: 0.12
+    # 积分项本身的绝对值上限，不是积分输出 Ki*integral 的上限。
+    x_integral_limit: 1.0
+    # 单轴 PID 原始输出上限，单位 m/s；之后还会执行平面速度模长限制。
+    x_output_limit: 0.60
+
+    # ================================================================
+    # y 轴位置 PID：y 位置误差 -> 地图坐标系 vy
+    # ================================================================
+    y_kp: 0.35
+    y_ki: 0.0
+    y_kd: 0.12
+    y_integral_limit: 1.0
+    y_output_limit: 0.60
+
+    # ================================================================
+    # yaw 轴 PID：最短 yaw 误差 -> yaw_rate
+    # ================================================================
+    # 比赛地图导航只控制平移，不让激光定位的yaw跳变转动机头。
+    # false时yaw_rate恒为0，到达判定也不再等待yaw误差进入死区。
+    enable_global_yaw_control: false
+    yaw_kp: 0.35
+    yaw_ki: 0.0
+    yaw_kd: 0.0
+    yaw_integral_limit: 1.0
+    # yaw PID 原始输出绝对值上限，单位 rad/s。
+    yaw_output_limit: 0.15
+
+    # ================================================================
+    # 微分低通滤波
+    # ================================================================
+    # 旧滤波值权重，范围 [0, 1)。
+    # 越接近 1 越平滑，但微分响应越慢。x/y/yaw 共用这一系数。
+    derivative_filter_alpha: 0.8
+
+    # ================================================================
+    # 最小和最大速度
+    # ================================================================
+    # 位置仍在跟踪状态时，如果 x/y 合成速度太小，会提升到此最小模长。
+    # 这样可减少速度只够抵消风和摩擦、飞行器却无法继续靠近目标的问题。
+    min_xy_speed: 0.04       # m/s
+    # x/y 合成速度的最终最大模长；斜向运动也不会超过该值。
+    max_xy_speed: 0.25       # m/s，全局绝对上限
+    # 地图导航按阶段限速：接近目标时PID仍会自动降速。
+    right_shift_max_xy_speed: 0.19    # m/s
+    forward_chase_max_xy_speed: 0.23  # m/s
+    # task2专用地图导航限速；只在active_task_mode=2时启用，不改变task1。
+    task2_max_xy_speed: 0.28                # m/s
+    task2_right_shift_max_xy_speed: 0.23    # m/s
+    task2_forward_chase_max_xy_speed: 0.25  # m/s
+
+    # yaw 仍在跟踪状态时使用的最小、最大偏航角速度。
+    min_yaw_rate: 0.03       # rad/s
+    max_yaw_rate: 0.15       # rad/s
+
+    # ================================================================
+    # 目标附近迟滞区
+    # ================================================================
+    # 位置误差进入 0.10 m 后，vx/vy 严格置零并清空 x/y 积分；
+    # 保持期间只有位置误差大于 0.15 m 才重新开始移动。
+    position_enter_tolerance: 0.10   # m
+    position_exit_tolerance: 0.15    # m，必须 >= 进入阈值
+
+    # 只在起飞后的 TAKEOFF_HOVER 阶段使用分轴死区：前后 X 对任务一
+    # 右移基准影响较小，因此允许更大偏差；横向 Y 仍保持原严格范围。
+    # 离开 TAKEOFF_HOVER 后立即恢复上面的普通二维位置死区。
+    takeoff_hover_x_enter_tolerance: 0.30  # m
+    takeoff_hover_x_exit_tolerance: 0.35   # m
+    takeoff_hover_y_enter_tolerance: 0.10  # m
+    takeoff_hover_y_exit_tolerance: 0.15   # m
+
+    # yaw 误差进入 0.10 rad 后，yaw_rate 严格置零并清空 yaw 积分；
+    # 保持期间只有 yaw 误差大于 0.15 rad 才重新开始转动。
+    yaw_enter_tolerance: 0.10        # rad
+    yaw_exit_tolerance: 0.15         # rad，必须 >= 进入阈值
+
+    # ================================================================
+    # 视觉相对位移控制（/competition/vision_assist_requested=true 时启用）
+    # ================================================================
+    # /vision/relative_error 使用 base_link：x>0 表示应向前，y>0 表示应向左。
+    # 视觉模式只控制平移，yaw_rate 始终严格为 0，由飞控保持当前机头方向。
+    vision_forward_kp: 0.8
+    vision_forward_ki: 0.0
+    vision_forward_kd: 0.05
+    vision_left_kp: 0.8
+    vision_left_ki: 0.0
+    vision_left_kd: 0.05
+    vision_integral_limit: 0.5
+    vision_axis_output_limit: 0.50
+    vision_derivative_filter_alpha: 0.8
+    vision_min_xy_speed: 0.05       # m/s
+    vision_max_xy_speed: 0.20       # m/s，首次实飞建议保持保守
+    vision_enter_tolerance: 0.05    # m
+    vision_exit_tolerance: 0.08     # m
+    # 相对位移超过此时间未收到新消息，即输出无效零速度；按本机接收时间判断。
+    vision_timeout_ms: 500
+
+    # ================================================================
+    # 控制频率、输入超时和坐标系
+    # ================================================================
+    control_rate_hz: 20.0
+    # /map/current_pose 的 header.stamp 距当前时间超过该值即视为无效。
+    pose_timeout_ms: 500
+    # 超过该时间未收到 /map/current_pose_valid，也视为无效。
+    valid_timeout_ms: 500
+    # 当前位姿和运行时目标都必须使用该 frame_id。
+    map_frame: "odom"
+    body_frame: "base_link"
+
+    # true：每秒打印一次误差与速度，便于联调；正式运行可设为 false。
+    print_status: true
+
+    # 注意：以上是建图和闭环联调用的保守初值，不是真机标定结果。
+    # 真机调参前应先确认速度方向、坐标系、串口执行层和紧急停机机制。

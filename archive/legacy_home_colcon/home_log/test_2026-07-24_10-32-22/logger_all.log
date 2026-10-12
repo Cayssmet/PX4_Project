@@ -1,0 +1,816 @@
+[0.275s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'test', '--packages-select', 'waypoint_velocity_controller']
+[0.275s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='test', build_base='build', install_base='install', merge_install=False, test_result_base=None, retest_until_fail=0, retest_until_pass=0, abort_on_error=False, return_code_on_test_failure=False, executor='parallel', parallel_workers=4, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['.'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=['waypoint_velocity_controller'], packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, allow_overriding=[], ctest_args=None, python_testing=None, pytest_args=None, pytest_with_coverage=False, unittest_args=None, verb_parser=<colcon_defaults.argument_parser.defaults.DefaultArgumentsDecorator object at 0xffff86a42000>, verb_extension=<colcon_core.verb.test.TestVerb object at 0xffff86bf23c0>, main=<bound method TestVerb.main of <colcon_core.verb.test.TestVerb object at 0xffff86bf23c0>>)
+[0.334s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.334s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.334s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.334s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.334s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) discover
+[0.334s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.334s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/ljz'
+[0.335s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[0.335s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[0.335s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[0.335s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[0.335s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[0.335s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[0.335s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[0.335s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[0.335s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[0.367s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['cmake', 'python']
+[0.367s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'cmake'
+[0.367s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python'
+[0.367s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['python_setup_py']
+[0.367s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python_setup_py'
+[0.367s] Level 1:colcon.colcon_core.package_identification:_identify(Desktop) by extensions ['ignore', 'ignore_ament_install']
+[0.367s] Level 1:colcon.colcon_core.package_identification:_identify(Desktop) by extension 'ignore'
+[0.367s] Level 1:colcon.colcon_core.package_identification:_identify(Desktop) by extension 'ignore_ament_install'
+[0.367s] Level 1:colcon.colcon_core.package_identification:_identify(Desktop) by extensions ['colcon_pkg']
+[0.367s] Level 1:colcon.colcon_core.package_identification:_identify(Desktop) by extension 'colcon_pkg'
+[0.367s] Level 1:colcon.colcon_core.package_identification:_identify(Desktop) by extensions ['colcon_meta']
+[0.367s] Level 1:colcon.colcon_core.package_identification:_identify(Desktop) by extension 'colcon_meta'
+[0.367s] Level 1:colcon.colcon_core.package_identification:_identify(Desktop) by extensions ['ros']
+[0.367s] Level 1:colcon.colcon_core.package_identification:_identify(Desktop) by extension 'ros'
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Desktop) by extensions ['cmake', 'python']
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Desktop) by extension 'cmake'
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Desktop) by extension 'python'
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Desktop) by extensions ['python_setup_py']
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Desktop) by extension 'python_setup_py'
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Documents) by extensions ['ignore', 'ignore_ament_install']
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Documents) by extension 'ignore'
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Documents) by extension 'ignore_ament_install'
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Documents) by extensions ['colcon_pkg']
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Documents) by extension 'colcon_pkg'
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Documents) by extensions ['colcon_meta']
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Documents) by extension 'colcon_meta'
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Documents) by extensions ['ros']
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Documents) by extension 'ros'
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Documents) by extensions ['cmake', 'python']
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Documents) by extension 'cmake'
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Documents) by extension 'python'
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Documents) by extensions ['python_setup_py']
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Documents) by extension 'python_setup_py'
+[0.368s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads) by extensions ['ignore', 'ignore_ament_install']
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads) by extension 'ignore'
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads) by extension 'ignore_ament_install'
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads) by extensions ['colcon_pkg']
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads) by extension 'colcon_pkg'
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads) by extensions ['colcon_meta']
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads) by extension 'colcon_meta'
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads) by extensions ['ros']
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads) by extension 'ros'
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads) by extensions ['cmake', 'python']
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads) by extension 'cmake'
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads) by extension 'python'
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads) by extensions ['python_setup_py']
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads) by extension 'python_setup_py'
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)) by extensions ['ignore', 'ignore_ament_install']
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)) by extension 'ignore'
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)) by extension 'ignore_ament_install'
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)) by extensions ['colcon_pkg']
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)) by extension 'colcon_pkg'
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)) by extensions ['colcon_meta']
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)) by extension 'colcon_meta'
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)) by extensions ['ros']
+[0.369s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)) by extension 'ros'
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)) by extensions ['cmake', 'python']
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)) by extension 'cmake'
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)) by extension 'python'
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)) by extensions ['python_setup_py']
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)) by extension 'python_setup_py'
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main) by extensions ['ignore', 'ignore_ament_install']
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main) by extension 'ignore'
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main) by extension 'ignore_ament_install'
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main) by extensions ['colcon_pkg']
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main) by extension 'colcon_pkg'
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main) by extensions ['colcon_meta']
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main) by extension 'colcon_meta'
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main) by extensions ['ros']
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main) by extension 'ros'
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main) by extensions ['cmake', 'python']
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main) by extension 'cmake'
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main) by extension 'python'
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main) by extensions ['python_setup_py']
+[0.370s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main) by extension 'python_setup_py'
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Instruction) by extensions ['ignore', 'ignore_ament_install']
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Instruction) by extension 'ignore'
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Instruction) by extension 'ignore_ament_install'
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Instruction) by extensions ['colcon_pkg']
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Instruction) by extension 'colcon_pkg'
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Instruction) by extensions ['colcon_meta']
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Instruction) by extension 'colcon_meta'
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Instruction) by extensions ['ros']
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Instruction) by extension 'ros'
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Instruction) by extensions ['cmake', 'python']
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Instruction) by extension 'cmake'
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Instruction) by extension 'python'
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Instruction) by extensions ['python_setup_py']
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Instruction) by extension 'python_setup_py'
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package) by extensions ['ignore', 'ignore_ament_install']
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package) by extension 'ignore'
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package) by extension 'ignore_ament_install'
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package) by extensions ['colcon_pkg']
+[0.371s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package) by extension 'colcon_pkg'
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package) by extensions ['colcon_meta']
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package) by extension 'colcon_meta'
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package) by extensions ['ros']
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package) by extension 'ros'
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package) by extensions ['cmake', 'python']
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package) by extension 'cmake'
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package) by extension 'python'
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package) by extensions ['python_setup_py']
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package) by extension 'python_setup_py'
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228) by extensions ['ignore', 'ignore_ament_install']
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228) by extension 'ignore'
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228) by extension 'ignore_ament_install'
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228) by extensions ['colcon_pkg']
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228) by extension 'colcon_pkg'
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228) by extensions ['colcon_meta']
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228) by extension 'colcon_meta'
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228) by extensions ['ros']
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228) by extension 'ros'
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228) by extensions ['cmake', 'python']
+[0.372s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228) by extension 'cmake'
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228) by extension 'python'
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228) by extensions ['python_setup_py']
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228) by extension 'python_setup_py'
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src) by extensions ['ignore', 'ignore_ament_install']
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src) by extension 'ignore'
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src) by extension 'ignore_ament_install'
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src) by extensions ['colcon_pkg']
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src) by extension 'colcon_pkg'
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src) by extensions ['colcon_meta']
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src) by extension 'colcon_meta'
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src) by extensions ['ros']
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src) by extension 'ros'
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src) by extensions ['cmake', 'python']
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src) by extension 'cmake'
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src) by extension 'python'
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src) by extensions ['python_setup_py']
+[0.373s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src) by extension 'python_setup_py'
+[0.374s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extensions ['ignore', 'ignore_ament_install']
+[0.374s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extension 'ignore'
+[0.374s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extension 'ignore_ament_install'
+[0.374s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extensions ['colcon_pkg']
+[0.374s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extension 'colcon_pkg'
+[0.374s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extensions ['colcon_meta']
+[0.374s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extension 'colcon_meta'
+[0.374s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extensions ['ros']
+[0.374s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extension 'ros'
+[0.377s] DEBUG:colcon.colcon_core.package_identification:Package 'Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_driver' with type 'ros.ament_cmake' and name 'lslidar_driver'
+[0.377s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extensions ['ignore', 'ignore_ament_install']
+[0.378s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extension 'ignore'
+[0.378s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extension 'ignore_ament_install'
+[0.378s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extensions ['colcon_pkg']
+[0.378s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extension 'colcon_pkg'
+[0.378s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extensions ['colcon_meta']
+[0.378s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extension 'colcon_meta'
+[0.378s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extensions ['ros']
+[0.378s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extension 'ros'
+[0.379s] DEBUG:colcon.colcon_core.package_identification:Package 'Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs' with type 'ros.ament_cmake' and name 'lslidar_msgs'
+[0.379s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/cartographer_config) by extensions ['ignore', 'ignore_ament_install']
+[0.379s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/cartographer_config) by extension 'ignore'
+[0.379s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/cartographer_config) by extension 'ignore_ament_install'
+[0.379s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/cartographer_config) by extensions ['colcon_pkg']
+[0.379s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/cartographer_config) by extension 'colcon_pkg'
+[0.379s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/cartographer_config) by extensions ['colcon_meta']
+[0.379s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/cartographer_config) by extension 'colcon_meta'
+[0.379s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/cartographer_config) by extensions ['ros']
+[0.379s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/cartographer_config) by extension 'ros'
+[0.380s] DEBUG:colcon.colcon_core.package_identification:Package 'Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/cartographer_config' with type 'ros.ament_cmake' and name 'cartographer_config'
+[0.380s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/csm) by extensions ['ignore', 'ignore_ament_install']
+[0.380s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/csm) by extension 'ignore'
+[0.380s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/csm) by extension 'ignore_ament_install'
+[0.380s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/csm) by extensions ['colcon_pkg']
+[0.380s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/csm) by extension 'colcon_pkg'
+[0.380s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/csm) by extensions ['colcon_meta']
+[0.380s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/csm) by extension 'colcon_meta'
+[0.380s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/csm) by extensions ['ros']
+[0.380s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/csm) by extension 'ros'
+[0.381s] DEBUG:colcon.colcon_core.package_identification:Package 'Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/csm' with type 'ros.ament_cmake' and name 'csm'
+[0.381s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/ros2_laser_scan_matcher) by extensions ['ignore', 'ignore_ament_install']
+[0.381s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/ros2_laser_scan_matcher) by extension 'ignore'
+[0.381s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/ros2_laser_scan_matcher) by extension 'ignore_ament_install'
+[0.381s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/ros2_laser_scan_matcher) by extensions ['colcon_pkg']
+[0.381s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/ros2_laser_scan_matcher) by extension 'colcon_pkg'
+[0.381s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/ros2_laser_scan_matcher) by extensions ['colcon_meta']
+[0.381s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/ros2_laser_scan_matcher) by extension 'colcon_meta'
+[0.381s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/ros2_laser_scan_matcher) by extensions ['ros']
+[0.381s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/ros2_laser_scan_matcher) by extension 'ros'
+[0.382s] DEBUG:colcon.colcon_core.package_identification:Package 'Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/ros2_laser_scan_matcher' with type 'ros.ament_cmake' and name 'ros2_laser_scan_matcher'
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/飞行器ros2激光slam方案.assets) by extensions ['ignore', 'ignore_ament_install']
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/飞行器ros2激光slam方案.assets) by extension 'ignore'
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/飞行器ros2激光slam方案.assets) by extension 'ignore_ament_install'
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/飞行器ros2激光slam方案.assets) by extensions ['colcon_pkg']
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/飞行器ros2激光slam方案.assets) by extension 'colcon_pkg'
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/飞行器ros2激光slam方案.assets) by extensions ['colcon_meta']
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/飞行器ros2激光slam方案.assets) by extension 'colcon_meta'
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/飞行器ros2激光slam方案.assets) by extensions ['ros']
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/飞行器ros2激光slam方案.assets) by extension 'ros'
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/飞行器ros2激光slam方案.assets) by extensions ['cmake', 'python']
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/飞行器ros2激光slam方案.assets) by extension 'cmake'
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/飞行器ros2激光slam方案.assets) by extension 'python'
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/飞行器ros2激光slam方案.assets) by extensions ['python_setup_py']
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/飞行器ros2激光slam方案.assets) by extension 'python_setup_py'
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Music) by extensions ['ignore', 'ignore_ament_install']
+[0.383s] Level 1:colcon.colcon_core.package_identification:_identify(Music) by extension 'ignore'
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Music) by extension 'ignore_ament_install'
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Music) by extensions ['colcon_pkg']
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Music) by extension 'colcon_pkg'
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Music) by extensions ['colcon_meta']
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Music) by extension 'colcon_meta'
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Music) by extensions ['ros']
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Music) by extension 'ros'
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Music) by extensions ['cmake', 'python']
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Music) by extension 'cmake'
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Music) by extension 'python'
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Music) by extensions ['python_setup_py']
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Music) by extension 'python_setup_py'
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Pictures) by extensions ['ignore', 'ignore_ament_install']
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Pictures) by extension 'ignore'
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Pictures) by extension 'ignore_ament_install'
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Pictures) by extensions ['colcon_pkg']
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Pictures) by extension 'colcon_pkg'
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Pictures) by extensions ['colcon_meta']
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Pictures) by extension 'colcon_meta'
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Pictures) by extensions ['ros']
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Pictures) by extension 'ros'
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Pictures) by extensions ['cmake', 'python']
+[0.384s] Level 1:colcon.colcon_core.package_identification:_identify(Pictures) by extension 'cmake'
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Pictures) by extension 'python'
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Pictures) by extensions ['python_setup_py']
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Pictures) by extension 'python_setup_py'
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Public) by extensions ['ignore', 'ignore_ament_install']
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Public) by extension 'ignore'
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Public) by extension 'ignore_ament_install'
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Public) by extensions ['colcon_pkg']
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Public) by extension 'colcon_pkg'
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Public) by extensions ['colcon_meta']
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Public) by extension 'colcon_meta'
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Public) by extensions ['ros']
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Public) by extension 'ros'
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Public) by extensions ['cmake', 'python']
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Public) by extension 'cmake'
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Public) by extension 'python'
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Public) by extensions ['python_setup_py']
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Public) by extension 'python_setup_py'
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Templates) by extensions ['ignore', 'ignore_ament_install']
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Templates) by extension 'ignore'
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Templates) by extension 'ignore_ament_install'
+[0.385s] Level 1:colcon.colcon_core.package_identification:_identify(Templates) by extensions ['colcon_pkg']
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Templates) by extension 'colcon_pkg'
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Templates) by extensions ['colcon_meta']
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Templates) by extension 'colcon_meta'
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Templates) by extensions ['ros']
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Templates) by extension 'ros'
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Templates) by extensions ['cmake', 'python']
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Templates) by extension 'cmake'
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Templates) by extension 'python'
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Templates) by extensions ['python_setup_py']
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Templates) by extension 'python_setup_py'
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Videos) by extensions ['ignore', 'ignore_ament_install']
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Videos) by extension 'ignore'
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Videos) by extension 'ignore_ament_install'
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Videos) by extensions ['colcon_pkg']
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Videos) by extension 'colcon_pkg'
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Videos) by extensions ['colcon_meta']
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Videos) by extension 'colcon_meta'
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Videos) by extensions ['ros']
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Videos) by extension 'ros'
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Videos) by extensions ['cmake', 'python']
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Videos) by extension 'cmake'
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Videos) by extension 'python'
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Videos) by extensions ['python_setup_py']
+[0.386s] Level 1:colcon.colcon_core.package_identification:_identify(Videos) by extension 'python_setup_py'
+[0.387s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extensions ['ignore', 'ignore_ament_install']
+[0.387s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extension 'ignore'
+[0.387s] Level 1:colcon.colcon_core.package_identification:_identify(build) ignored
+[0.387s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extensions ['ignore', 'ignore_ament_install']
+[0.387s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extension 'ignore'
+[0.387s] Level 1:colcon.colcon_core.package_identification:_identify(install) ignored
+[0.387s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extensions ['ignore', 'ignore_ament_install']
+[0.387s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extension 'ignore'
+[0.387s] Level 1:colcon.colcon_core.package_identification:_identify(log) ignored
+[0.387s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws) by extensions ['ignore', 'ignore_ament_install']
+[0.387s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws) by extension 'ignore'
+[0.387s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws) by extension 'ignore_ament_install'
+[0.387s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws) by extensions ['colcon_pkg']
+[0.387s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws) by extension 'colcon_pkg'
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws) by extensions ['colcon_meta']
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws) by extension 'colcon_meta'
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws) by extensions ['ros']
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws) by extension 'ros'
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws) by extensions ['cmake', 'python']
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws) by extension 'cmake'
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws) by extension 'python'
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws) by extensions ['python_setup_py']
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws) by extension 'python_setup_py'
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/build) by extensions ['ignore', 'ignore_ament_install']
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/build) by extension 'ignore'
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/build) ignored
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/install) by extensions ['ignore', 'ignore_ament_install']
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/install) by extension 'ignore'
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/install) ignored
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/log) by extensions ['ignore', 'ignore_ament_install']
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/log) by extension 'ignore'
+[0.388s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/log) ignored
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extensions ['ignore', 'ignore_ament_install']
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'ignore'
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'ignore_ament_install'
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extensions ['colcon_pkg']
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'colcon_pkg'
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extensions ['colcon_meta']
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'colcon_meta'
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extensions ['ros']
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'ros'
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extensions ['cmake', 'python']
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'cmake'
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'python'
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extensions ['python_setup_py']
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src) by extension 'python_setup_py'
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228) by extensions ['ignore', 'ignore_ament_install']
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228) by extension 'ignore'
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228) by extension 'ignore_ament_install'
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228) by extensions ['colcon_pkg']
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228) by extension 'colcon_pkg'
+[0.389s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228) by extensions ['colcon_meta']
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228) by extension 'colcon_meta'
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228) by extensions ['ros']
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228) by extension 'ros'
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228) by extensions ['cmake', 'python']
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228) by extension 'cmake'
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228) by extension 'python'
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228) by extensions ['python_setup_py']
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228) by extension 'python_setup_py'
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src) by extensions ['ignore', 'ignore_ament_install']
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src) by extension 'ignore'
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src) by extension 'ignore_ament_install'
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src) by extensions ['colcon_pkg']
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src) by extension 'colcon_pkg'
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src) by extensions ['colcon_meta']
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src) by extension 'colcon_meta'
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src) by extensions ['ros']
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src) by extension 'ros'
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src) by extensions ['cmake', 'python']
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src) by extension 'cmake'
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src) by extension 'python'
+[0.390s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src) by extensions ['python_setup_py']
+[0.391s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src) by extension 'python_setup_py'
+[0.391s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extensions ['ignore', 'ignore_ament_install']
+[0.391s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extension 'ignore'
+[0.391s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extension 'ignore_ament_install'
+[0.391s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extensions ['colcon_pkg']
+[0.391s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extension 'colcon_pkg'
+[0.391s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extensions ['colcon_meta']
+[0.391s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extension 'colcon_meta'
+[0.391s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extensions ['ros']
+[0.391s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_driver) by extension 'ros'
+[0.392s] DEBUG:colcon.colcon_core.package_identification:Package 'ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_driver' with type 'ros.ament_cmake' and name 'lslidar_driver'
+[0.392s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extensions ['ignore', 'ignore_ament_install']
+[0.392s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extension 'ignore'
+[0.392s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extension 'ignore_ament_install'
+[0.392s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extensions ['colcon_pkg']
+[0.392s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extension 'colcon_pkg'
+[0.392s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extensions ['colcon_meta']
+[0.392s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extension 'colcon_meta'
+[0.392s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extensions ['ros']
+[0.392s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs) by extension 'ros'
+[0.393s] DEBUG:colcon.colcon_core.package_identification:Package 'ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs' with type 'ros.ament_cmake' and name 'lslidar_msgs'
+[0.393s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/cartographer_config) by extensions ['ignore', 'ignore_ament_install']
+[0.393s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/cartographer_config) by extension 'ignore'
+[0.393s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/cartographer_config) by extension 'ignore_ament_install'
+[0.393s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/cartographer_config) by extensions ['colcon_pkg']
+[0.393s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/cartographer_config) by extension 'colcon_pkg'
+[0.393s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/cartographer_config) by extensions ['colcon_meta']
+[0.393s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/cartographer_config) by extension 'colcon_meta'
+[0.394s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/cartographer_config) by extensions ['ros']
+[0.394s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/cartographer_config) by extension 'ros'
+[0.394s] DEBUG:colcon.colcon_core.package_identification:Package 'ros2_ws/src/cartographer_config' with type 'ros.ament_cmake' and name 'cartographer_config'
+[0.394s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/csm) by extensions ['ignore', 'ignore_ament_install']
+[0.394s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/csm) by extension 'ignore'
+[0.394s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/csm) by extension 'ignore_ament_install'
+[0.394s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/csm) by extensions ['colcon_pkg']
+[0.394s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/csm) by extension 'colcon_pkg'
+[0.394s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/csm) by extensions ['colcon_meta']
+[0.394s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/csm) by extension 'colcon_meta'
+[0.394s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/csm) by extensions ['ros']
+[0.394s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/csm) by extension 'ros'
+[0.395s] DEBUG:colcon.colcon_core.package_identification:Package 'ros2_ws/src/csm' with type 'ros.ament_cmake' and name 'csm'
+[0.395s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/ros2_laser_scan_matcher) by extensions ['ignore', 'ignore_ament_install']
+[0.395s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/ros2_laser_scan_matcher) by extension 'ignore'
+[0.395s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/ros2_laser_scan_matcher) by extension 'ignore_ament_install'
+[0.396s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/ros2_laser_scan_matcher) by extensions ['colcon_pkg']
+[0.396s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/ros2_laser_scan_matcher) by extension 'colcon_pkg'
+[0.396s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/ros2_laser_scan_matcher) by extensions ['colcon_meta']
+[0.396s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/ros2_laser_scan_matcher) by extension 'colcon_meta'
+[0.396s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/ros2_laser_scan_matcher) by extensions ['ros']
+[0.396s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/ros2_laser_scan_matcher) by extension 'ros'
+[0.396s] DEBUG:colcon.colcon_core.package_identification:Package 'ros2_ws/src/ros2_laser_scan_matcher' with type 'ros.ament_cmake' and name 'ros2_laser_scan_matcher'
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws) by extensions ['ignore', 'ignore_ament_install']
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws) by extension 'ignore'
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws) by extension 'ignore_ament_install'
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws) by extensions ['colcon_pkg']
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws) by extension 'colcon_pkg'
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws) by extensions ['colcon_meta']
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws) by extension 'colcon_meta'
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws) by extensions ['ros']
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws) by extension 'ros'
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws) by extensions ['cmake', 'python']
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws) by extension 'cmake'
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws) by extension 'python'
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws) by extensions ['python_setup_py']
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws) by extension 'python_setup_py'
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src) by extensions ['ignore', 'ignore_ament_install']
+[0.397s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src) by extension 'ignore'
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src) by extension 'ignore_ament_install'
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src) by extensions ['colcon_pkg']
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src) by extension 'colcon_pkg'
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src) by extensions ['colcon_meta']
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src) by extension 'colcon_meta'
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src) by extensions ['ros']
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src) by extension 'ros'
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src) by extensions ['cmake', 'python']
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src) by extension 'cmake'
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src) by extension 'python'
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src) by extensions ['python_setup_py']
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src) by extension 'python_setup_py'
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src/waypoint_velocity_controller) by extensions ['ignore', 'ignore_ament_install']
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src/waypoint_velocity_controller) by extension 'ignore'
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src/waypoint_velocity_controller) by extension 'ignore_ament_install'
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src/waypoint_velocity_controller) by extensions ['colcon_pkg']
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src/waypoint_velocity_controller) by extension 'colcon_pkg'
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src/waypoint_velocity_controller) by extensions ['colcon_meta']
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src/waypoint_velocity_controller) by extension 'colcon_meta'
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src/waypoint_velocity_controller) by extensions ['ros']
+[0.398s] Level 1:colcon.colcon_core.package_identification:_identify(ros2_ws/src/waypoint_velocity_ws/src/waypoint_velocity_controller) by extension 'ros'
+[0.400s] DEBUG:colcon.colcon_core.package_identification:Package 'ros2_ws/src/waypoint_velocity_ws/src/waypoint_velocity_controller' with type 'ros.ament_cmake' and name 'waypoint_velocity_controller'
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap) by extensions ['ignore', 'ignore_ament_install']
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap) by extension 'ignore'
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap) by extension 'ignore_ament_install'
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap) by extensions ['colcon_pkg']
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap) by extension 'colcon_pkg'
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap) by extensions ['colcon_meta']
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap) by extension 'colcon_meta'
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap) by extensions ['ros']
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap) by extension 'ros'
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap) by extensions ['cmake', 'python']
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap) by extension 'cmake'
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap) by extension 'python'
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap) by extensions ['python_setup_py']
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap) by extension 'python_setup_py'
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox) by extensions ['ignore', 'ignore_ament_install']
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox) by extension 'ignore'
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox) by extension 'ignore_ament_install'
+[0.400s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox) by extensions ['colcon_pkg']
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox) by extension 'colcon_pkg'
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox) by extensions ['colcon_meta']
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox) by extension 'colcon_meta'
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox) by extensions ['ros']
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox) by extension 'ros'
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox) by extensions ['cmake', 'python']
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox) by extension 'cmake'
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox) by extension 'python'
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox) by extensions ['python_setup_py']
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox) by extension 'python_setup_py'
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/7764) by extensions ['ignore', 'ignore_ament_install']
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/7764) by extension 'ignore'
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/7764) by extension 'ignore_ament_install'
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/7764) by extensions ['colcon_pkg']
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/7764) by extension 'colcon_pkg'
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/7764) by extensions ['colcon_meta']
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/7764) by extension 'colcon_meta'
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/7764) by extensions ['ros']
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/7764) by extension 'ros'
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/7764) by extensions ['cmake', 'python']
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/7764) by extension 'cmake'
+[0.401s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/7764) by extension 'python'
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/7764) by extensions ['python_setup_py']
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/7764) by extension 'python_setup_py'
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/common) by extensions ['ignore', 'ignore_ament_install']
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/common) by extension 'ignore'
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/common) by extension 'ignore_ament_install'
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/common) by extensions ['colcon_pkg']
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/common) by extension 'colcon_pkg'
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/common) by extensions ['colcon_meta']
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/common) by extension 'colcon_meta'
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/common) by extensions ['ros']
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/common) by extension 'ros'
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/common) by extensions ['cmake', 'python']
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/common) by extension 'cmake'
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/common) by extension 'python'
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/common) by extensions ['python_setup_py']
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/firefox/common) by extension 'python_setup_py'
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration) by extensions ['ignore', 'ignore_ament_install']
+[0.402s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration) by extension 'ignore'
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration) by extension 'ignore_ament_install'
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration) by extensions ['colcon_pkg']
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration) by extension 'colcon_pkg'
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration) by extensions ['colcon_meta']
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration) by extension 'colcon_meta'
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration) by extensions ['ros']
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration) by extension 'ros'
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration) by extensions ['cmake', 'python']
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration) by extension 'cmake'
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration) by extension 'python'
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration) by extensions ['python_setup_py']
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration) by extension 'python_setup_py'
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346) by extensions ['ignore', 'ignore_ament_install']
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346) by extension 'ignore'
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346) by extension 'ignore_ament_install'
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346) by extensions ['colcon_pkg']
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346) by extension 'colcon_pkg'
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346) by extensions ['colcon_meta']
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346) by extension 'colcon_meta'
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346) by extensions ['ros']
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346) by extension 'ros'
+[0.403s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346) by extensions ['cmake', 'python']
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346) by extension 'cmake'
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346) by extension 'python'
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346) by extensions ['python_setup_py']
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346) by extension 'python_setup_py'
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Desktop) by extensions ['ignore', 'ignore_ament_install']
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Desktop) by extension 'ignore'
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Desktop) by extension 'ignore_ament_install'
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Desktop) by extensions ['colcon_pkg']
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Desktop) by extension 'colcon_pkg'
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Desktop) by extensions ['colcon_meta']
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Desktop) by extension 'colcon_meta'
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Desktop) by extensions ['ros']
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Desktop) by extension 'ros'
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Desktop) by extensions ['cmake', 'python']
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Desktop) by extension 'cmake'
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Desktop) by extension 'python'
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Desktop) by extensions ['python_setup_py']
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Desktop) by extension 'python_setup_py'
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Documents) by extensions ['ignore', 'ignore_ament_install']
+[0.404s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Documents) by extension 'ignore'
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Documents) by extension 'ignore_ament_install'
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Documents) by extensions ['colcon_pkg']
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Documents) by extension 'colcon_pkg'
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Documents) by extensions ['colcon_meta']
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Documents) by extension 'colcon_meta'
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Documents) by extensions ['ros']
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Documents) by extension 'ros'
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Documents) by extensions ['cmake', 'python']
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Documents) by extension 'cmake'
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Documents) by extension 'python'
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Documents) by extensions ['python_setup_py']
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Documents) by extension 'python_setup_py'
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Downloads) by extensions ['ignore', 'ignore_ament_install']
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Downloads) by extension 'ignore'
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Downloads) by extension 'ignore_ament_install'
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Downloads) by extensions ['colcon_pkg']
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Downloads) by extension 'colcon_pkg'
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Downloads) by extensions ['colcon_meta']
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Downloads) by extension 'colcon_meta'
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Downloads) by extensions ['ros']
+[0.405s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Downloads) by extension 'ros'
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Downloads) by extensions ['cmake', 'python']
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Downloads) by extension 'cmake'
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Downloads) by extension 'python'
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Downloads) by extensions ['python_setup_py']
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Downloads) by extension 'python_setup_py'
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Music) by extensions ['ignore', 'ignore_ament_install']
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Music) by extension 'ignore'
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Music) by extension 'ignore_ament_install'
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Music) by extensions ['colcon_pkg']
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Music) by extension 'colcon_pkg'
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Music) by extensions ['colcon_meta']
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Music) by extension 'colcon_meta'
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Music) by extensions ['ros']
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Music) by extension 'ros'
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Music) by extensions ['cmake', 'python']
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Music) by extension 'cmake'
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Music) by extension 'python'
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Music) by extensions ['python_setup_py']
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Music) by extension 'python_setup_py'
+[0.406s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Pictures) by extensions ['ignore', 'ignore_ament_install']
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Pictures) by extension 'ignore'
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Pictures) by extension 'ignore_ament_install'
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Pictures) by extensions ['colcon_pkg']
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Pictures) by extension 'colcon_pkg'
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Pictures) by extensions ['colcon_meta']
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Pictures) by extension 'colcon_meta'
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Pictures) by extensions ['ros']
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Pictures) by extension 'ros'
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Pictures) by extensions ['cmake', 'python']
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Pictures) by extension 'cmake'
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Pictures) by extension 'python'
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Pictures) by extensions ['python_setup_py']
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Pictures) by extension 'python_setup_py'
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Public) by extensions ['ignore', 'ignore_ament_install']
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Public) by extension 'ignore'
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Public) by extension 'ignore_ament_install'
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Public) by extensions ['colcon_pkg']
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Public) by extension 'colcon_pkg'
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Public) by extensions ['colcon_meta']
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Public) by extension 'colcon_meta'
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Public) by extensions ['ros']
+[0.407s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Public) by extension 'ros'
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Public) by extensions ['cmake', 'python']
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Public) by extension 'cmake'
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Public) by extension 'python'
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Public) by extensions ['python_setup_py']
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Public) by extension 'python_setup_py'
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Templates) by extensions ['ignore', 'ignore_ament_install']
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Templates) by extension 'ignore'
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Templates) by extension 'ignore_ament_install'
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Templates) by extensions ['colcon_pkg']
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Templates) by extension 'colcon_pkg'
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Templates) by extensions ['colcon_meta']
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Templates) by extension 'colcon_meta'
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Templates) by extensions ['ros']
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Templates) by extension 'ros'
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Templates) by extensions ['cmake', 'python']
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Templates) by extension 'cmake'
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Templates) by extension 'python'
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Templates) by extensions ['python_setup_py']
+[0.408s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Templates) by extension 'python_setup_py'
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Videos) by extensions ['ignore', 'ignore_ament_install']
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Videos) by extension 'ignore'
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Videos) by extension 'ignore_ament_install'
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Videos) by extensions ['colcon_pkg']
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Videos) by extension 'colcon_pkg'
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Videos) by extensions ['colcon_meta']
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Videos) by extension 'colcon_meta'
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Videos) by extensions ['ros']
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Videos) by extension 'ros'
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Videos) by extensions ['cmake', 'python']
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Videos) by extension 'cmake'
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Videos) by extension 'python'
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Videos) by extensions ['python_setup_py']
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/346/Videos) by extension 'python_setup_py'
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396) by extensions ['ignore', 'ignore_ament_install']
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396) by extension 'ignore'
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396) by extension 'ignore_ament_install'
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396) by extensions ['colcon_pkg']
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396) by extension 'colcon_pkg'
+[0.409s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396) by extensions ['colcon_meta']
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396) by extension 'colcon_meta'
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396) by extensions ['ros']
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396) by extension 'ros'
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396) by extensions ['cmake', 'python']
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396) by extension 'cmake'
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396) by extension 'python'
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396) by extensions ['python_setup_py']
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396) by extension 'python_setup_py'
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Desktop) by extensions ['ignore', 'ignore_ament_install']
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Desktop) by extension 'ignore'
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Desktop) by extension 'ignore_ament_install'
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Desktop) by extensions ['colcon_pkg']
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Desktop) by extension 'colcon_pkg'
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Desktop) by extensions ['colcon_meta']
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Desktop) by extension 'colcon_meta'
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Desktop) by extensions ['ros']
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Desktop) by extension 'ros'
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Desktop) by extensions ['cmake', 'python']
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Desktop) by extension 'cmake'
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Desktop) by extension 'python'
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Desktop) by extensions ['python_setup_py']
+[0.410s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Desktop) by extension 'python_setup_py'
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Documents) by extensions ['ignore', 'ignore_ament_install']
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Documents) by extension 'ignore'
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Documents) by extension 'ignore_ament_install'
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Documents) by extensions ['colcon_pkg']
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Documents) by extension 'colcon_pkg'
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Documents) by extensions ['colcon_meta']
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Documents) by extension 'colcon_meta'
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Documents) by extensions ['ros']
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Documents) by extension 'ros'
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Documents) by extensions ['cmake', 'python']
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Documents) by extension 'cmake'
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Documents) by extension 'python'
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Documents) by extensions ['python_setup_py']
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Documents) by extension 'python_setup_py'
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Downloads) by extensions ['ignore', 'ignore_ament_install']
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Downloads) by extension 'ignore'
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Downloads) by extension 'ignore_ament_install'
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Downloads) by extensions ['colcon_pkg']
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Downloads) by extension 'colcon_pkg'
+[0.411s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Downloads) by extensions ['colcon_meta']
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Downloads) by extension 'colcon_meta'
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Downloads) by extensions ['ros']
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Downloads) by extension 'ros'
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Downloads) by extensions ['cmake', 'python']
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Downloads) by extension 'cmake'
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Downloads) by extension 'python'
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Downloads) by extensions ['python_setup_py']
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Downloads) by extension 'python_setup_py'
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Music) by extensions ['ignore', 'ignore_ament_install']
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Music) by extension 'ignore'
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Music) by extension 'ignore_ament_install'
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Music) by extensions ['colcon_pkg']
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Music) by extension 'colcon_pkg'
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Music) by extensions ['colcon_meta']
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Music) by extension 'colcon_meta'
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Music) by extensions ['ros']
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Music) by extension 'ros'
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Music) by extensions ['cmake', 'python']
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Music) by extension 'cmake'
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Music) by extension 'python'
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Music) by extensions ['python_setup_py']
+[0.412s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Music) by extension 'python_setup_py'
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Pictures) by extensions ['ignore', 'ignore_ament_install']
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Pictures) by extension 'ignore'
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Pictures) by extension 'ignore_ament_install'
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Pictures) by extensions ['colcon_pkg']
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Pictures) by extension 'colcon_pkg'
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Pictures) by extensions ['colcon_meta']
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Pictures) by extension 'colcon_meta'
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Pictures) by extensions ['ros']
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Pictures) by extension 'ros'
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Pictures) by extensions ['cmake', 'python']
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Pictures) by extension 'cmake'
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Pictures) by extension 'python'
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Pictures) by extensions ['python_setup_py']
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Pictures) by extension 'python_setup_py'
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Public) by extensions ['ignore', 'ignore_ament_install']
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Public) by extension 'ignore'
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Public) by extension 'ignore_ament_install'
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Public) by extensions ['colcon_pkg']
+[0.413s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Public) by extension 'colcon_pkg'
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Public) by extensions ['colcon_meta']
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Public) by extension 'colcon_meta'
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Public) by extensions ['ros']
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Public) by extension 'ros'
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Public) by extensions ['cmake', 'python']
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Public) by extension 'cmake'
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Public) by extension 'python'
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Public) by extensions ['python_setup_py']
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Public) by extension 'python_setup_py'
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Templates) by extensions ['ignore', 'ignore_ament_install']
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Templates) by extension 'ignore'
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Templates) by extension 'ignore_ament_install'
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Templates) by extensions ['colcon_pkg']
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Templates) by extension 'colcon_pkg'
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Templates) by extensions ['colcon_meta']
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Templates) by extension 'colcon_meta'
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Templates) by extensions ['ros']
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Templates) by extension 'ros'
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Templates) by extensions ['cmake', 'python']
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Templates) by extension 'cmake'
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Templates) by extension 'python'
+[0.414s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Templates) by extensions ['python_setup_py']
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Templates) by extension 'python_setup_py'
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Videos) by extensions ['ignore', 'ignore_ament_install']
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Videos) by extension 'ignore'
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Videos) by extension 'ignore_ament_install'
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Videos) by extensions ['colcon_pkg']
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Videos) by extension 'colcon_pkg'
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Videos) by extensions ['colcon_meta']
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Videos) by extension 'colcon_meta'
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Videos) by extensions ['ros']
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Videos) by extension 'ros'
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Videos) by extensions ['cmake', 'python']
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Videos) by extension 'cmake'
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Videos) by extension 'python'
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Videos) by extensions ['python_setup_py']
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/396/Videos) by extension 'python_setup_py'
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/common) by extensions ['ignore', 'ignore_ament_install']
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/common) by extension 'ignore'
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/common) by extension 'ignore_ament_install'
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/common) by extensions ['colcon_pkg']
+[0.415s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/common) by extension 'colcon_pkg'
+[0.416s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/common) by extensions ['colcon_meta']
+[0.416s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/common) by extension 'colcon_meta'
+[0.416s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/common) by extensions ['ros']
+[0.416s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/common) by extension 'ros'
+[0.416s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/common) by extensions ['cmake', 'python']
+[0.416s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/common) by extension 'cmake'
+[0.416s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/common) by extension 'python'
+[0.416s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/common) by extensions ['python_setup_py']
+[0.416s] Level 1:colcon.colcon_core.package_identification:_identify(snap/snapd-desktop-integration/common) by extension 'python_setup_py'
+[0.416s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.416s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) discover
+[0.416s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) using defaults
+[0.416s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) discover
+[0.416s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) using defaults
+[0.426s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'cartographer_config' in 'ros2_ws/src/cartographer_config'
+[0.426s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'cartographer_config' in 'Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/cartographer_config'
+[0.426s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'csm' in 'Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/csm'
+[0.426s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'csm' in 'ros2_ws/src/csm'
+[0.426s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'lslidar_msgs' in 'Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs'
+[0.426s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'lslidar_msgs' in 'ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_msgs'
+[0.426s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'lslidar_driver' in 'Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/LSLIDAR_X_ROS2-20240228/src/lslidar_driver'
+[0.426s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'lslidar_driver' in 'ros2_ws/src/LSLIDAR_X_ROS2-20240228/src/lslidar_driver'
+[0.426s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'ros2_laser_scan_matcher' in 'Downloads/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main (1)/The-SLAM-of-Raspberrypi5b-and-ROS2-and-N10radar-main/Package/ros2_laser_scan_matcher'
+[0.426s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'ros2_laser_scan_matcher' in 'ros2_ws/src/ros2_laser_scan_matcher'
+[0.426s] Level 5:colcon.colcon_core.verb:set package 'waypoint_velocity_controller' test argument 'ctest_args' from command line to 'None'
+[0.426s] Level 5:colcon.colcon_core.verb:set package 'waypoint_velocity_controller' test argument 'python_testing' from command line to 'None'
+[0.426s] Level 5:colcon.colcon_core.verb:set package 'waypoint_velocity_controller' test argument 'pytest_args' from command line to 'None'
+[0.427s] Level 5:colcon.colcon_core.verb:set package 'waypoint_velocity_controller' test argument 'pytest_with_coverage' from command line to 'False'
+[0.427s] Level 5:colcon.colcon_core.verb:set package 'waypoint_velocity_controller' test argument 'unittest_args' from command line to 'None'
+[0.427s] Level 5:colcon.colcon_core.verb:set package 'waypoint_velocity_controller' test argument 'retest_until_pass' from command line to '0'
+[0.427s] Level 5:colcon.colcon_core.verb:set package 'waypoint_velocity_controller' test argument 'retest_until_fail' from command line to '0'
+[0.427s] DEBUG:colcon.colcon_core.verb.test:Testing package 'waypoint_velocity_controller' with the following arguments: {'build_base': '/home/ljz/build/waypoint_velocity_controller', 'ctest_args': None, 'install_base': '/home/ljz/install/waypoint_velocity_controller', 'path': '/home/ljz/ros2_ws/src/waypoint_velocity_ws/src/waypoint_velocity_controller', 'pytest_args': None, 'pytest_with_coverage': False, 'python_testing': None, 'retest_until_fail': 0, 'retest_until_pass': 0, 'test_result_base': None, 'unittest_args': None}
+[0.427s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[0.428s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[0.428s] INFO:colcon.colcon_ros.task.ament_cmake.test:Testing ROS package in '/home/ljz/ros2_ws/src/waypoint_velocity_ws/src/waypoint_velocity_controller' with build type 'ament_cmake'
+[0.429s] INFO:colcon.colcon_cmake.task.cmake.test:Testing CMake package in '/home/ljz/ros2_ws/src/waypoint_velocity_ws/src/waypoint_velocity_controller'
+[0.451s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[0.451s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[0.451s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with 'Has this package been built before?'
+[0.451s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[0.461s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[0.461s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[0.461s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[0.491s] DEBUG:colcon.colcon_core.event_reactor:joined thread

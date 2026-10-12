@@ -1,0 +1,321 @@
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <functional>
+#include <memory>
+#include <stdexcept>
+#include <string>
+
+#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/transform_stamped.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/bool.hpp"
+#include "std_msgs/msg/string.hpp"
+#include "tf2/exceptions.hpp"
+#include "tf2_ros/buffer.h"
+#include "tf2_ros/transform_listener.h"
+
+#include "map_coordinate_provider/pose_math.hpp"
+
+namespace map_coordinate_provider
+{
+
+/**
+ * @brief 从 TF 获取无人机在 map 坐标系中的完整位姿。
+ *
+ * 雷达驱动只提供扫描数据，SLAM/定位节点使用扫描数据计算 TF。这里读取的是
+ * map -> base_link 的最终变换，而不是直接从 /scan 或 /map 猜测当前位置。
+ *
+ * 新版节点不再选择 x/y/yaw 中的某一个分量，也不再发布旧版单变量 PID 数据。
+ * x、y 和包含 yaw 的完整四元数会在同一条 PoseStamped 消息中一起发布。
+ */
+class MapCoordinateNode : public rclcpp::Node
+{
+public:
+  MapCoordinateNode()
+  : Node("map_coordinate_node")
+  {
+    // 所有参数均可直接在 config/coordinate_params.yaml 中修改。
+    map_frame_ = declare_parameter<std::string>("map_frame", "map");
+    base_frame_ = declare_parameter<std::string>("base_frame", "base_link");
+    publish_rate_hz_ = declare_parameter<double>("publish_rate_hz", 20.0);
+    tf_stale_timeout_ms_ = declare_parameter<double>("tf_stale_timeout_ms", 500.0);
+    max_absolute_position_m_ =
+      declare_parameter<double>("max_absolute_position_m", 7.0);
+    max_pose_step_m_ = declare_parameter<double>("max_pose_step_m", 0.15);
+    max_pose_yaw_step_rad_ = declare_parameter<double>("max_pose_yaw_step_rad", 0.15);
+    max_pose_linear_speed_m_s_ =
+      declare_parameter<double>("max_pose_linear_speed_m_s", 1.20);
+    max_pose_yaw_rate_rad_s_ =
+      declare_parameter<double>("max_pose_yaw_rate_rad_s", 2.25);
+    print_coordinates_ = declare_parameter<bool>("print_coordinates", true);
+
+    validate_parameters();
+
+    // Buffer 保存收到的 TF；TransformListener 自动订阅 /tf 和 /tf_static。
+    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_clock());
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
+    // 使用绝对话题名，确保与 position_pid_controller 的订阅接口完全一致。
+    pose_publisher_ = create_publisher<geometry_msgs::msg::PoseStamped>(
+      "/map/current_pose", 10);
+    valid_publisher_ = create_publisher<std_msgs::msg::Bool>(
+      "/map/current_pose_valid", 10);
+
+    // 只允许在起飞前重新建立位姿连续性基准。飞行阶段发生跳变时仍保持失效。
+    auto phase_qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable().transient_local();
+    phase_subscription_ = create_subscription<std_msgs::msg::String>(
+      "/competition/phase", phase_qos,
+      [this](const std_msgs::msg::String::SharedPtr message) {
+        mission_phase_ = message->data;
+        mission_phase_received_ = true;
+      });
+
+    const auto timer_period = std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::duration<double>(1.0 / publish_rate_hz_));
+    timer_ = create_wall_timer(
+      timer_period, std::bind(&MapCoordinateNode::read_and_publish, this));
+
+    RCLCPP_INFO(
+      get_logger(),
+      "完整位姿获取节点已启动：读取 %s -> %s，频率 %.1f Hz",
+      map_frame_.c_str(), base_frame_.c_str(), publish_rate_hz_);
+  }
+
+private:
+  void validate_parameters() const
+  {
+    if (map_frame_.empty() || base_frame_.empty()) {
+      throw std::invalid_argument("map_frame 和 base_frame 不能为空");
+    }
+    if (!std::isfinite(publish_rate_hz_) || publish_rate_hz_ <= 0.0) {
+      throw std::invalid_argument("publish_rate_hz 必须是大于 0 的有限数值");
+    }
+    if (!std::isfinite(tf_stale_timeout_ms_) || tf_stale_timeout_ms_ <= 0.0) {
+      throw std::invalid_argument("tf_stale_timeout_ms 必须是大于 0 的有限数值");
+    }
+    if (!std::isfinite(max_absolute_position_m_) || max_absolute_position_m_ <= 0.0 ||
+      !std::isfinite(max_pose_step_m_) || max_pose_step_m_ <= 0.0 ||
+      !std::isfinite(max_pose_yaw_step_rad_) || max_pose_yaw_step_rad_ <= 0.0 ||
+      !std::isfinite(max_pose_linear_speed_m_s_) || max_pose_linear_speed_m_s_ <= 0.0 ||
+      !std::isfinite(max_pose_yaw_rate_rad_s_) || max_pose_yaw_rate_rad_s_ <= 0.0)
+    {
+      throw std::invalid_argument("位姿连续性保护参数必须是大于0的有限数值");
+    }
+  }
+
+  void read_and_publish()
+  {
+    const rclcpp::Time current_time = now();
+    geometry_msgs::msg::TransformStamped transform;
+
+    try {
+      // TimePointZero 表示读取 TF 缓冲区中最新的一帧变换。
+      // 即使实际链路是 map -> odom -> base_link，tf2 也会自动完成整链换算。
+      transform = tf_buffer_->lookupTransform(
+        map_frame_, base_frame_, tf2::TimePointZero);
+    } catch (const tf2::TransformException & error) {
+      publish_invalid(std::string("无法取得 TF：") + error.what());
+      return;
+    }
+
+    // 新 PID 会再次检查 PoseStamped 时间戳；这里先拦截空时间戳、未来时间和旧 TF。
+    const rclcpp::Time transform_time(
+      transform.header.stamp, get_clock()->get_clock_type());
+    if (transform_time.nanoseconds() <= 0) {
+      publish_invalid("TF 的时间戳为空");
+      return;
+    }
+
+    const double tf_age_ms = (current_time - transform_time).seconds() * 1000.0;
+    if (!std::isfinite(tf_age_ms) || tf_age_ms < 0.0) {
+      publish_invalid("TF 时间戳来自未来或系统时钟发生回退");
+      return;
+    }
+    if (tf_age_ms > tf_stale_timeout_ms_) {
+      publish_invalid("TF 已超过允许的更新时间");
+      return;
+    }
+
+    const double x = transform.transform.translation.x;
+    const double y = transform.transform.translation.y;
+    const double z = transform.transform.translation.z;
+    if (!position_is_finite(x, y, z)) {
+      publish_invalid("TF 位置含有 NaN 或 Inf");
+      return;
+    }
+
+    if (!absolute_position_is_plausible(x, y, max_absolute_position_m_)) {
+      recovery_candidate_available_ = false;
+      publish_invalid("TF 已超出比赛局部地图允许的绝对范围");
+      return;
+    }
+
+    const auto & input_orientation = transform.transform.rotation;
+    NormalizedQuaternionYaw orientation;
+    if (!normalize_quaternion_and_get_yaw(
+        input_orientation.x, input_orientation.y,
+        input_orientation.z, input_orientation.w, orientation))
+    {
+      publish_invalid("TF 姿态四元数非法");
+      return;
+    }
+
+    if (last_pose_accepted_) {
+      const double raw_elapsed_seconds = (transform_time - last_transform_time_).seconds();
+      // 一帧被拒绝后，不能因“距最后合法帧越来越久”而逐渐放宽速度门限，
+      // 否则同一条错误轨迹的第二、第三帧最终会被重新接纳。最多按两个发布周期
+      // 检查运动连续性；真实TF中断后宁可短暂失效，也不把跳变送入飞行PID。
+      const double elapsed_seconds = std::min(
+        raw_elapsed_seconds, 2.0 / publish_rate_hz_);
+      if (!pose_motion_is_plausible(
+          last_x_, last_y_, last_yaw_, x, y, orientation.yaw, elapsed_seconds,
+          max_pose_step_m_, max_pose_yaw_step_rad_, max_pose_linear_speed_m_s_,
+          max_pose_yaw_rate_rad_s_))
+      {
+        if (!recover_preflight_baseline(x, y, orientation.yaw, transform_time)) {
+          publish_invalid("TF 位姿发生不可能的距离、速度或偏航跳变");
+          return;
+        }
+      }
+    }
+
+    recovery_candidate_available_ = false;
+
+    // ---------- 同时发布 x、y、z 和完整姿态 ----------
+    geometry_msgs::msg::PoseStamped pose;
+    pose.header.stamp = transform.header.stamp;
+    pose.header.frame_id = map_frame_;
+    pose.pose.position.x = x;
+    pose.pose.position.y = y;
+    pose.pose.position.z = z;
+    pose.pose.orientation.x = orientation.x;
+    pose.pose.orientation.y = orientation.y;
+    pose.pose.orientation.z = orientation.z;
+    pose.pose.orientation.w = orientation.w;
+    pose_publisher_->publish(pose);
+
+    // 只有本周期真的发布了合法位姿，才发布 valid=true。
+    std_msgs::msg::Bool valid_message;
+    valid_message.data = true;
+    valid_publisher_->publish(valid_message);
+
+    last_pose_accepted_ = true;
+    last_x_ = x;
+    last_y_ = y;
+    last_yaw_ = orientation.yaw;
+    last_transform_time_ = transform_time;
+
+    if (print_coordinates_) {
+      RCLCPP_INFO_THROTTLE(
+        get_logger(), *get_clock(), 1000,
+        "当前地图位姿：x=%.3f m, y=%.3f m, yaw=%.3f rad（frame=%s）",
+        x, y, orientation.yaw, map_frame_.c_str());
+    }
+  }
+
+  void publish_invalid(const std::string & reason)
+  {
+    // 无效时不伪造全零位姿，只持续发布 false。
+    // position_pid_controller 收到 false 后会持续发布零速度及 control_valid=false。
+    std_msgs::msg::Bool valid_message;
+    valid_message.data = false;
+    valid_publisher_->publish(valid_message);
+
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 2000,
+      "当前地图位姿无效：%s", reason.c_str());
+  }
+
+  bool preflight_phase() const
+  {
+    return !mission_phase_received_ || mission_phase_ == "WAIT_START" ||
+           mission_phase_ == "WAIT_READY";
+  }
+
+  bool recover_preflight_baseline(
+    double x, double y, double yaw, const rclcpp::Time & transform_time)
+  {
+    if (!preflight_phase()) {
+      recovery_candidate_available_ = false;
+      return false;
+    }
+
+    if (!recovery_candidate_available_) {
+      recovery_candidate_available_ = true;
+      recovery_start_time_ = transform_time;
+      recovery_x_ = x;
+      recovery_y_ = y;
+      recovery_yaw_ = yaw;
+      recovery_transform_time_ = transform_time;
+      return false;
+    }
+
+    const double elapsed_seconds = (transform_time - recovery_transform_time_).seconds();
+    if (!pose_motion_is_plausible(
+        recovery_x_, recovery_y_, recovery_yaw_, x, y, yaw, elapsed_seconds,
+        max_pose_step_m_, max_pose_yaw_step_rad_, max_pose_linear_speed_m_s_,
+        max_pose_yaw_rate_rad_s_))
+    {
+      recovery_start_time_ = transform_time;
+    }
+
+    recovery_x_ = x;
+    recovery_y_ = y;
+    recovery_yaw_ = yaw;
+    recovery_transform_time_ = transform_time;
+    if ((transform_time - recovery_start_time_).seconds() < 0.5) {
+      return false;
+    }
+
+    RCLCPP_WARN(
+      get_logger(),
+      "起飞前TF已连续稳定0.5秒，重新建立位姿连续性基准：x=%.3f y=%.3f yaw=%.3f",
+      x, y, yaw);
+    last_pose_accepted_ = false;
+    recovery_candidate_available_ = false;
+    return true;
+  }
+
+  std::string map_frame_;
+  std::string base_frame_;
+  double publish_rate_hz_{20.0};
+  double tf_stale_timeout_ms_{500.0};
+  double max_absolute_position_m_{7.0};
+  double max_pose_step_m_{0.15};
+  double max_pose_yaw_step_rad_{0.15};
+  double max_pose_linear_speed_m_s_{1.20};
+  double max_pose_yaw_rate_rad_s_{2.25};
+  bool print_coordinates_{true};
+  bool last_pose_accepted_{false};
+  double last_x_{0.0};
+  double last_y_{0.0};
+  double last_yaw_{0.0};
+  rclcpp::Time last_transform_time_{0, 0, RCL_ROS_TIME};
+  bool mission_phase_received_{false};
+  std::string mission_phase_{"WAIT_START"};
+  bool recovery_candidate_available_{false};
+  double recovery_x_{0.0};
+  double recovery_y_{0.0};
+  double recovery_yaw_{0.0};
+  rclcpp::Time recovery_start_time_{0, 0, RCL_ROS_TIME};
+  rclcpp::Time recovery_transform_time_{0, 0, RCL_ROS_TIME};
+
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_publisher_;
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr valid_publisher_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr phase_subscription_;
+  rclcpp::TimerBase::SharedPtr timer_;
+};
+
+}  // namespace map_coordinate_provider
+
+int main(int argc, char * argv[])
+{
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<map_coordinate_provider::MapCoordinateNode>());
+  rclcpp::shutdown();
+  return 0;
+}

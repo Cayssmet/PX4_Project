@@ -1,0 +1,6 @@
+[0.000000] (-) TimerEvent: {}
+[0.000380] (waypoint_velocity_controller) JobQueued: {'identifier': 'waypoint_velocity_controller', 'dependencies': OrderedDict({'waypoint_velocity_controller': '/home/ljz/install/waypoint_velocity_controller'})}
+[0.000756] (waypoint_velocity_controller) JobStarted: {'identifier': 'waypoint_velocity_controller'}
+[0.012853] (waypoint_velocity_controller) StderrLine: {'line': b'Traceback (most recent call last):\n  File "/usr/lib/python3/dist-packages/colcon_core/executor/__init__.py", line 91, in __call__\n    rc = await self.task(*args, **kwargs)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/usr/lib/python3/dist-packages/colcon_core/task/__init__.py", line 120, in __call__\n    return await task_method(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/usr/lib/python3/dist-packages/colcon_ros/task/ament_cmake/test.py", line 29, in test\n    return await extension.test()\n           ^^^^^^^^^^^^^^^^^^^^^^\n  File "/usr/lib/python3/dist-packages/colcon_cmake/task/cmake/test.py", line 44, in test\n    assert os.path.exists(args.build_base), \\\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Has this package been built before?\n'}
+[0.014026] (waypoint_velocity_controller) JobEnded: {'identifier': 'waypoint_velocity_controller', 'rc': 1}
+[0.023437] (-) EventReactorShutdown: {}

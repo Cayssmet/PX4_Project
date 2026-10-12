@@ -1,0 +1,60 @@
+flight_controller_bridge:
+  ros__parameters:
+    # ==================================================================
+    # 一、物理串口
+    # 当前飞控已显式烧录V2；总启动必须同样使用V2，禁止自动探测或回退。
+    protocol_version: 2
+    # ==================================================================
+    # 当前CH340由udev固定为 /dev/flight_controller，换USB插口后别名不变。
+    # 不要与雷达已经占用的 /dev/ttyACM0 混用。
+    serial_device: "/dev/flight_controller"
+    baud_rate: 115200
+
+    # 树莓派按 50 Hz 向飞控重复发送最新命令；飞控端应设置 200 ms 看门狗。
+    send_rate_hz: 50.0
+    reconnect_interval_ms: 1000
+
+    # 超过该时间没有合法的飞控状态帧，/flight/status.communication_ok=false。
+    flight_feedback_timeout_ms: 300
+
+    # 状态 ACK 最多允许落后最近已发送命令多少帧。50 Hz 下 10 帧约为 200 ms。
+    # 超出窗口、位于未来或来自上次串口会话的 ACK 不会恢复 communication_ok。
+    max_ack_lag_frames: 10
+
+    # true（真机默认）：收到至少一帧新鲜飞控反馈后才允许发送普通非零速度。
+    # 降落请求不依赖定位和 PID，但仍必须来自已完成的合法任务。
+    require_flight_feedback_before_control: true
+
+    # ==================================================================
+    # 二、ROS 数据时效和坐标系
+    # ==================================================================
+    map_frame: "odom"
+    body_frame: "base_link"
+    pid_command_timeout_ms: 300
+    # 航点或 route 身份变化后，只接受保护时间结束后新产生的 PID 命令。
+    new_target_pid_guard_ms: 100
+    pose_timeout_ms: 300
+    mission_status_timeout_ms: 500
+    land_request_timeout_ms: 500
+    # V2 /flight/directive 必须持续刷新；过期后只发送无效零速帧。
+    directive_timeout_ms: 500
+
+    # ==================================================================
+    # 三、发送给飞控前的最后安全范围
+    # ==================================================================
+    # 超出范围时不会截断后继续飞，而是整帧 control_valid=false 并发送零速度。
+    # PID 包默认最大平移速度为 0.8 m/s，因此这里故意留有余量。
+    max_linear_speed: 1.5       # m/s，指水平合速度模长
+    max_vertical_speed: 0.5     # m/s，仅V2精密下降使用
+    max_yaw_rate: 2.0           # rad/s
+    min_target_height: 0.1      # m
+    max_target_height: 1.7      # m，与飞控V2生产上限1700mm一致
+
+    # ==================================================================
+    # 四、运行日志
+    # ==================================================================
+    # true 时每秒显示一次串口、任务、安全门和当前发送值摘要。
+    print_status: true
+
+    # 真机提示：第一次测试必须拆桨或断开电机动力，并先使用串口回环/伪飞控测试。
+    # 本包不会自行解锁飞控；是否允许树莓派接管仍应由飞控端遥控开关决定。

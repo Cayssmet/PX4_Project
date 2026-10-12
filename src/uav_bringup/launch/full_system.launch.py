@@ -1,0 +1,406 @@
+"""按安全顺序启动无人机完整导航与飞控通信系统。"""
+
+import fcntl
+import os
+
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    EmitEvent,
+    LogInfo,
+    RegisterEventHandler,
+    TimerAction,
+)
+from launch.conditions import IfCondition
+from launch.event_handlers import OnProcessExit
+from launch.events import Shutdown
+from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
+
+
+_INSTANCE_LOCK_HANDLE = None
+
+
+def _acquire_single_instance_lock():
+    """阻止残留或误启动的第二套系统同时发布TF和飞行指令。"""
+    global _INSTANCE_LOCK_HANDLE
+    if _INSTANCE_LOCK_HANDLE is not None:
+        return
+
+    lock_path = f"/tmp/uav-navigation-{os.getuid()}.lock"
+    lock_handle = open(lock_path, "a+", encoding="utf-8")
+    try:
+        fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as exc:
+        lock_handle.close()
+        raise RuntimeError(
+            "检测到另一套无人机总系统仍在运行；拒绝启动第二个Cartographer。"
+            "请先停止已有的uav-navigation.service或ros2 launch进程。"
+        ) from exc
+
+    lock_handle.seek(0)
+    lock_handle.truncate()
+    lock_handle.write(f"pid={os.getpid()}\n")
+    lock_handle.flush()
+    _INSTANCE_LOCK_HANDLE = lock_handle
+
+
+def _critical_exit_handler(node_action, display_name):
+    """任一关键节点退出时关闭整套系统，交由 systemd 完整重启。"""
+    return RegisterEventHandler(
+        OnProcessExit(
+            target_action=node_action,
+            on_exit=[
+                LogInfo(msg=f"关键节点 {display_name} 已退出，正在关闭整套系统"),
+                EmitEvent(
+                    event=Shutdown(reason=f"critical node exited: {display_name}")
+                ),
+            ],
+        )
+    )
+
+
+def generate_launch_description():
+    _acquire_single_instance_lock()
+
+    use_rviz = LaunchConfiguration("use_rviz")
+    competition_right_shift_land_test = LaunchConfiguration(
+        "competition_right_shift_land_test"
+    )
+    competition_auto_start_for_test = LaunchConfiguration(
+        "competition_auto_start_for_test"
+    )
+    flight_serial_device = LaunchConfiguration("flight_serial_device")
+    flight_protocol_version = LaunchConfiguration("flight_protocol_version")
+    camera_serial_device = LaunchConfiguration("camera_serial_device")
+    car_serial_device = LaunchConfiguration("car_serial_device")
+    gcs_serial_device = LaunchConfiguration("gcs_serial_device")
+    lidar_serial_device = LaunchConfiguration("lidar_serial_device")
+    configuration_basename = LaunchConfiguration("configuration_basename")
+    enable_flight_recorder = LaunchConfiguration("enable_flight_recorder")
+    flight_log_root = LaunchConfiguration("flight_log_root")
+    record_lidar_scan = LaunchConfiguration("record_lidar_scan")
+
+    flight_params = os.path.join(
+        get_package_share_directory("flight_controller_bridge"),
+        "config",
+        "flight_controller_bridge_params.yaml",
+    )
+    camera_params = os.path.join(
+        get_package_share_directory("camera_serial_bridge"),
+        "config",
+        "camera_serial_bridge_params.yaml",
+    )
+    car_params = os.path.join(
+        get_package_share_directory("car_serial_bridge"),
+        "config",
+        "car_serial_bridge_params.yaml",
+    )
+    gcs_params = os.path.join(
+        get_package_share_directory("gcs_serial_bridge"),
+        "config",
+        "gcs_serial_bridge_params.yaml",
+    )
+    lidar_params = os.path.join(
+        get_package_share_directory("lslidar_driver"),
+        "params",
+        "lidar_uart_ros2",
+        "lsn10.yaml",
+    )
+    cartographer_config_dir = os.path.join(
+        get_package_share_directory("cartographer_config"),
+        "configuration_files",
+    )
+    coordinate_params = os.path.join(
+        get_package_share_directory("map_coordinate_provider"),
+        "config",
+        "coordinate_params.yaml",
+    )
+    pid_params = os.path.join(
+        get_package_share_directory("position_pid_controller"),
+        "config",
+        "position_pid_params.yaml",
+    )
+    competition_mission_params = os.path.join(
+        get_package_share_directory("waypoint_manager"),
+        "config",
+        "competition_mission_params.yaml",
+    )
+
+    flight_bridge = Node(
+        package="flight_controller_bridge",
+        executable="flight_controller_bridge_node",
+        name="flight_controller_bridge",
+        output="screen",
+        parameters=[
+            flight_params,
+            {
+                "serial_device": flight_serial_device,
+                "protocol_version": ParameterValue(flight_protocol_version, value_type=int),
+            },
+        ],
+    )
+
+    camera_bridge = Node(
+        package="camera_serial_bridge",
+        executable="camera_serial_bridge_node",
+        name="camera_serial_bridge",
+        output="screen",
+        parameters=[camera_params, {"serial_device": camera_serial_device}],
+    )
+
+    car_bridge = Node(
+        package="car_serial_bridge",
+        executable="car_serial_bridge_node",
+        name="car_serial_bridge",
+        output="screen",
+        parameters=[car_params, {"serial_device": car_serial_device}],
+    )
+
+    gcs_bridge = Node(
+        package="gcs_serial_bridge",
+        executable="gcs_serial_bridge_node",
+        name="gcs_serial_bridge",
+        output="screen",
+        parameters=[gcs_params, {"serial_device": gcs_serial_device}],
+    )
+
+    lidar = Node(
+        package="lslidar_driver",
+        executable="lslidar_driver_node",
+        name="lslidar_driver_node",
+        output="screen",
+        emulate_tty=True,
+        parameters=[lidar_params, {"serial_port_": lidar_serial_device}],
+    )
+
+    cartographer = Node(
+        package="cartographer_ros",
+        executable="cartographer_node",
+        name="cartographer_node",
+        output="screen",
+        arguments=[
+            "-configuration_directory",
+            cartographer_config_dir,
+            "-configuration_basename",
+            configuration_basename,
+        ],
+        remappings=[("scan", "/scan")],
+    )
+
+    base_to_laser = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="base_to_laser_static_transform",
+        output="screen",
+        arguments=[
+            "--x",
+            "0",
+            "--y",
+            "0",
+            "--z",
+            "0",
+            "--roll",
+            "0",
+            "--pitch",
+            "0",
+            "--yaw",
+            "0",
+            "--frame-id",
+            "base_link",
+            "--child-frame-id",
+            "laser",
+        ],
+    )
+
+    occupancy_grid = Node(
+        package="cartographer_ros",
+        executable="cartographer_occupancy_grid_node",
+        name="cartographer_occupancy_grid_node",
+        output="screen",
+        parameters=[{"resolution": 0.05}],
+    )
+
+    rviz = Node(
+        condition=IfCondition(use_rviz),
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        output="screen",
+    )
+
+    coordinate = Node(
+        package="map_coordinate_provider",
+        executable="map_coordinate_node",
+        name="map_coordinate_node",
+        output="screen",
+        parameters=[coordinate_params],
+    )
+
+    pid = Node(
+        package="position_pid_controller",
+        executable="position_pid_node",
+        name="position_pid_controller",
+        output="screen",
+        parameters=[pid_params],
+    )
+
+    competition_directive = Node(
+        package="waypoint_manager",
+        executable="competition_flight_directive_node",
+        name="competition_flight_directive",
+        output="screen",
+        parameters=[competition_mission_params],
+    )
+
+    competition_mission = Node(
+        package="waypoint_manager",
+        executable="competition_mission_node",
+        # 名称必须与 competition_mission_params.yaml 顶层键一致，否则参数不会加载。
+        name="competition_mission_manager",
+        output="screen",
+        parameters=[
+            competition_mission_params,
+            {
+                "auto_start_for_test": ParameterValue(
+                    competition_auto_start_for_test, value_type=bool
+                ),
+                "right_shift_land_test": ParameterValue(
+                    competition_right_shift_land_test, value_type=bool
+                )
+            },
+        ],
+    )
+
+    flight_recorder = Node(
+        condition=IfCondition(enable_flight_recorder),
+        package="flight_data_recorder",
+        executable="flight_data_recorder_node",
+        name="flight_data_recorder",
+        output="screen",
+        parameters=[
+            {
+                "output_root": flight_log_root,
+                "record_bag": True,
+                "record_scan": ParameterValue(record_lidar_scan, value_type=bool),
+                "max_bag_size_mb": 2048,
+                "post_roll_sec": 2.0,
+            }
+        ],
+    )
+
+    critical_nodes = [
+        (flight_bridge, "flight_controller_bridge"),
+        (car_bridge, "car_serial_bridge"),
+        (lidar, "lslidar_driver_node"),
+        (cartographer, "cartographer_node"),
+        (occupancy_grid, "cartographer_occupancy_grid_node"),
+        (coordinate, "map_coordinate_node"),
+        (pid, "position_pid_controller"),
+        (competition_directive, "competition_flight_directive"),
+        (competition_mission, "competition_mission"),
+    ]
+
+    return LaunchDescription(
+        [
+            DeclareLaunchArgument(
+                "use_rviz",
+                default_value="false",
+                description="无显示器开机启动时保持false；人工调试时可设为true",
+            ),
+            DeclareLaunchArgument(
+                "competition_auto_start_for_test",
+                default_value="false",
+                description="仅无桨地面测试可设true；比赛默认等待小车task_mode和START",
+            ),
+            DeclareLaunchArgument(
+                "competition_right_shift_land_test",
+                default_value="false",
+                description="与自动测试同时启用：起飞、右移0.375m后直接最终降落",
+            ),
+            DeclareLaunchArgument(
+                "flight_serial_device",
+                default_value="/dev/flight_controller",
+                description="飞控USB转TTL持久别名",
+            ),
+            DeclareLaunchArgument(
+                "flight_protocol_version",
+                default_value="2",
+                description="飞控线缆协议版本；当前飞控V2固件必须设为2",
+            ),
+            DeclareLaunchArgument(
+                "camera_serial_device",
+                default_value="/dev/ttyAMA0",
+                description="摄像头GPIO14/15硬件串口；未连接时摄像头桥自动等待",
+            ),
+            DeclareLaunchArgument(
+                "car_serial_device",
+                default_value="/dev/car_bluetooth",
+                description="小车蓝牙串口持久别名；未连接时小车桥安全等待",
+            ),
+            DeclareLaunchArgument(
+                "gcs_serial_device",
+                default_value="/dev/gcs_bluetooth",
+                description="地面站蓝牙串口持久别名；离线不影响飞行任务",
+            ),
+            DeclareLaunchArgument(
+                "lidar_serial_device",
+                default_value="/dev/wheeltec_laser",
+                description="N10雷达串口设备或稳定别名",
+            ),
+            DeclareLaunchArgument(
+                "configuration_basename",
+                default_value="n10_2d.lua",
+                description="Cartographer Lua配置文件名",
+            ),
+            DeclareLaunchArgument(
+                "enable_flight_recorder",
+                default_value="true",
+                description="Automatic per-mission recorder; waits for task START before writing data",
+            ),
+            DeclareLaunchArgument(
+                "flight_log_root",
+                default_value="/home/ljz/ros2_ws/logs/flights",
+                description="Per-flight log root directory",
+            ),
+            DeclareLaunchArgument(
+                "record_lidar_scan",
+                default_value="false",
+                description="Record raw scan; disabled by default to keep flight logging lightweight",
+            ),
+            LogInfo(
+                msg=[
+                    "uav_bringup启动：competition_auto_start_for_test=",
+                    competition_auto_start_for_test,
+                    "，competition_right_shift_land_test=",
+                    competition_right_shift_land_test,
+                    "，flight_protocol_version=",
+                    flight_protocol_version,
+                    "，enable_flight_recorder=",
+                    enable_flight_recorder,
+                    "，record_lidar_scan=",
+                    record_lidar_scan,
+                    "；默认等待小车task_mode和START，服务启动不会自动执行航线或解锁飞控",
+                ]
+            ),
+            *[_critical_exit_handler(node, name) for node, name in critical_nodes],
+            flight_bridge,
+            flight_recorder,
+            lidar,
+            TimerAction(
+                period=3.0,
+                actions=[
+                    base_to_laser,
+                    cartographer,
+                    occupancy_grid,
+                    rviz,
+                ],
+            ),
+            TimerAction(period=6.0, actions=[coordinate]),
+            TimerAction(period=7.0, actions=[pid, camera_bridge, car_bridge, gcs_bridge]),
+            TimerAction(period=8.0, actions=[competition_directive]),
+            TimerAction(period=9.0, actions=[competition_mission]),
+        ]
+    )

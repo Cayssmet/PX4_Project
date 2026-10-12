@@ -1,0 +1,11 @@
+gcs_serial_bridge:
+  ros__parameters:
+    serial_device: "/dev/gcs_bluetooth"
+    baud_rate: 115200
+    send_rate_hz: 10.0
+    heartbeat_timeout_ms: 1000
+    input_timeout_ms: 500
+    vision_timeout_ms: 200
+    reconnect_interval_ms: 1000
+    print_status: true
+

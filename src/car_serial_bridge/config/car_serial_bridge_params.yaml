@@ -1,0 +1,9 @@
+car_serial_bridge:
+  ros__parameters:
+    serial_device: "/dev/car_bluetooth"
+    baud_rate: 115200
+    sync_rate_hz: 10.0
+    status_timeout_ms: 500
+    reconnect_interval_ms: 1000
+    flight_status_timeout_ms: 500
+    print_status: true

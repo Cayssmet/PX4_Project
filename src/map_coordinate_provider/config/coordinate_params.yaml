@@ -1,0 +1,34 @@
+# 新版 map_coordinate_provider 的全部参数。
+# 本版只提供完整位姿，不再包含 pid_axis 或单变量 PID 输出。
+
+map_coordinate_node:
+  ros__parameters:
+    # SLAM/定位系统使用的固定世界坐标系。
+    # 必须与 position_pid_controller 中的 map_frame 完全相同。
+    map_frame: "odom"
+
+    # 无人机机体对应的坐标系。
+    # 如果你的 TF 使用 base_footprint 或其他名称，应在这里修改。
+    base_frame: "base_link"
+
+    # 查询并发布完整 x、y、yaw 位姿的频率。
+    # 建议与 PID 的 control_rate_hz 相同，默认均为 20 Hz。
+    publish_rate_hz: 20.0
+
+    # 最新 TF 比当前时间旧多少毫秒后判定为失效。
+    # 应不大于 PID 的 pose_timeout_ms；两者默认均为 500 ms。
+    tf_stale_timeout_ms: 500.0
+
+    # 比赛场地的局部定位不可能离起点数百米。超过7米的坐标即使连续稳定，
+    # 也不得被起飞前的“重新建立基准”逻辑接纳。
+    max_absolute_position_m: 7.0
+
+    # 拦截SLAM突然跳到远处或突然旋转的错误位姿。正常最大水平指令约0.2m/s，
+    # 本轮统一放宽50%到1.2m/s；超过阈值时停止水平PID，但不撤销飞控本地定高。
+    max_pose_step_m: 0.15
+    max_pose_yaw_step_rad: 0.15
+    max_pose_linear_speed_m_s: 1.20
+    max_pose_yaw_rate_rad_s: 2.25
+
+    # true：每秒打印一次 x、y、yaw，方便联调；正式运行可改为 false。
+    print_coordinates: true

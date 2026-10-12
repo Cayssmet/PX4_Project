@@ -1,0 +1,84 @@
+competition_flight_directive:
+  ros__parameters:
+    # 每次进程启动生成独立非零uint32飞控session；不得使用外部task session 1/2。
+    # 仅自动化测试允许把override设为固定值，正式运行必须保持0。
+    flight_session_id_override: 0
+    takeoff_action_id: 1
+    final_land_action_id: 2
+    publish_rate_hz: 20.0
+    status_timeout_ms: 500
+    min_takeoff_height_m: 0.30
+    max_target_height_m: 1.70
+    # task2以固定12cm/s视觉精密下降到20cm，再锁存FINAL_LAND完成近地降落。
+    task2_descent_velocity_mps: -0.12
+    task2_final_land_trigger_height_m: 0.20
+    print_status: true
+
+competition_mission_manager:
+  ros__parameters:
+    # 比赛模式绝不能上电自动执行。只有地面测试时才由 launch 参数临时覆盖。
+    auto_start_for_test: false
+    # 仅用于首次实飞：起飞、右移到固定点后直接FINAL_LAND，不进入前追和视觉流程。
+    # 必须与auto_start_for_test=true同时启用；默认false不影响正式比赛状态机。
+    right_shift_land_test: false
+    require_task_mode_from_car: true
+    default_task_mode: 1
+
+    map_frame: "odom"
+    manager_rate_hz: 20.0
+    print_status: true
+
+    # 从进入TAKEOFF_HOVER起最多等待20秒飞控TAKEOFF成功反馈。
+    # 超时锁存SAFE_HOLD，不强行右移；仅安全着地后的合法READY可清除。
+    takeoff_completion_timeout_sec: 20.0
+    # task1在同flight session的TAKEOFF成功后等待2秒；task2成功后立即追车。
+    # 实时HR、水平PID到点和地图位置均不参与该计时。
+    target_height_m: 1.23
+    task1_takeoff_hover_time_sec: 2.0
+    task2_takeoff_hover_time_sec: 0.0
+    # 位移以“收到启动指令时的机体朝向”为基准：前方为正，左侧为正。
+    # 按场地图中心线计算：H圆心到AB延长线的横向距离为0.375m。
+    # 机体左侧为正，因此右移0.375m必须使用负值。
+    lateral_offset_m: -0.375
+
+    # 横移到AB延长线后，沿初始机头方向追到B附近。视觉提前发现小车时立即请求接管。
+    forward_chase_distance_m: 2.75
+    lateral_hold_time_sec: 0.30
+    # 视觉包后续发布 /vision/target_valid。连续有效达到确认时间后进入视觉辅助阶段。
+    # 接管后若视觉数据超时，保持视觉阶段并由PID输出无效零速度，不会盲目恢复前追。
+    vision_confirm_time_sec: 0.30
+    vision_timeout_ms: 500
+    drop_window_timeout_ms: 500
+    visual_control_timeout_ms: 500
+    drop_alignment_time_sec: 0.20
+    drop_action_timeout_sec: 10.0
+    drop_feedback_timeout_ms: 1000
+    # task2当前只做到稳定落车：飞控报告landed后显示“已落车，稳定确认中”，
+    # 在车顶保持5秒后显示“已稳定”，不再复飞返航。
+    task2_land_align_time_sec: 0.50
+    task2_min_descent_time_sec: 1.0
+    task2_on_car_hold_time_sec: 5.0
+    task2_landed_stability_grace_sec: 0.25
+    home_hold_time_sec: 0.50
+
+    # 航点与反馈抗残留/抗抖动参数。
+    arrival_confirm_time_sec: 0.50
+    reach_lost_grace_time_sec: 0.20
+    new_target_guard_time_sec: 0.30
+    pose_timeout_ms: 500
+    pid_feedback_timeout_ms: 500
+    flight_status_timeout_ms: 500
+    # 默认关闭SAFE_HOLD锁存，保持此前比赛流程行为。
+    enable_safe_hold_latch: false
+    flight_recovery_confirm_time_sec: 0.25
+    flight_safe_hold_timeout_sec: 2.0
+
+    route_id: 20260729
+    takeoff_waypoint_id: 1001
+    lateral_waypoint_id: 1002
+    chase_waypoint_id: 1003
+    home_waypoint_id: 1004
+
+    max_abs_offset_m: 10.0
+    min_target_height_m: 0.5
+    max_target_height_m: 1.7

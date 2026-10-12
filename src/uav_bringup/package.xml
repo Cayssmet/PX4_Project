@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>uav_bringup</name>
+  <version>1.4.1</version>
+  <description>无人机定位、任务、飞控、小车、摄像头和只读地面站通信的一体化启动包。</description>
+
+  <maintainer email="ljz@example.com">ljz</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>camera_serial_bridge</exec_depend>
+  <exec_depend>car_serial_bridge</exec_depend>
+  <exec_depend>cartographer_config</exec_depend>
+  <exec_depend>cartographer_ros</exec_depend>
+  <exec_depend>flight_controller_bridge</exec_depend>
+  <exec_depend>flight_data_recorder</exec_depend>
+  <exec_depend>gcs_serial_bridge</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>lslidar_driver</exec_depend>
+  <exec_depend>map_coordinate_provider</exec_depend>
+  <exec_depend>position_pid_controller</exec_depend>
+  <exec_depend>ros2_laser_scan_matcher</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>waypoint_manager</exec_depend>
+
+  <test_depend>ament_cmake_pytest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

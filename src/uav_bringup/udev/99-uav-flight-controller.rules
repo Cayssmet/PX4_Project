@@ -1,0 +1,3 @@
+# Flight controller CH340: fixed USB port on xhci-hcd.1, port 1.
+# The CH340 has no unique serial number, so the physical path is required.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", ENV{ID_PATH}=="platform-xhci-hcd.1-usb-0:1:1.0", SYMLINK+="flight_controller", GROUP="dialout", MODE="0660"

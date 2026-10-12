@@ -1,0 +1,38 @@
+[Unit]
+Description=UAV ROS 2 navigation and flight-controller stack
+Wants=systemd-timesyncd.service
+After=local-fs.target systemd-timesyncd.service
+StartLimitIntervalSec=60
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=ljz
+Group=ljz
+WorkingDirectory=/home/ljz/ros2_ws
+Environment=ROS_DOMAIN_ID=0
+Environment=ROS_LOG_DIR=/home/ljz/.ros/log
+Environment=UAV_USE_RVIZ=false
+Environment=UAV_COMPETITION_AUTO_START_FOR_TEST=false
+Environment=UAV_COMPETITION_RIGHT_SHIFT_LAND_TEST=false
+Environment=UAV_LIDAR_SERIAL_DEVICE=/dev/wheeltec_laser
+Environment=UAV_FLIGHT_SERIAL_DEVICE=/dev/flight_controller
+Environment=UAV_FLIGHT_PROTOCOL_VERSION=2
+Environment=UAV_CAMERA_SERIAL_DEVICE=/dev/ttyAMA0
+Environment=UAV_CAR_SERIAL_DEVICE=/dev/car_bluetooth
+Environment=UAV_GCS_SERIAL_DEVICE=/dev/gcs_bluetooth
+Environment=UAV_TIME_SYNC_WAIT_SEC=20
+ExecStartPre=+/home/ljz/ros2_ws/install/uav_bringup/lib/uav_bringup/prepare_uav_clock.sh
+ExecStart=/home/ljz/ros2_ws/install/uav_bringup/lib/uav_bringup/start_uav_system.sh
+ExecStopPost=+/usr/bin/timedatectl set-ntp true
+Restart=no
+RestartSec=5
+KillSignal=SIGINT
+# 停止或重启时清理本服务cgroup内的全部ROS子进程，避免残留Cartographer。
+KillMode=control-group
+TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

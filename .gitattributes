@@ -1,0 +1,6 @@
+# 仓库内统一使用 LF 换行符。
+# 原因：本机 Git 的 core.autocrlf = true（来自 D:/gitee/Git/etc/gitconfig），
+# 若不锁定，.sh 脚本在 Windows 上被检出/编辑后会变成 CRLF，
+# 拷到树莓派（Linux）执行时会报 "bad interpreter" 而跑不起来。
+* text=auto
+*.sh text eol=lf

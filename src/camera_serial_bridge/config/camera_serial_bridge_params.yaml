@@ -1,0 +1,12 @@
+camera_serial_bridge:
+  ros__parameters:
+    # 摄像头通过树莓派GPIO14/15硬件串口连接。
+    serial_device: "/dev/ttyAMA0"
+    baud_rate: 115200
+    command_rate_hz: 10.0
+    requested_camera_rate_hz: 20
+    # v1.6协议规定超过200 ms未收到合法数据立即撤销旧位移。
+    data_timeout_ms: 200
+    reconnect_interval_ms: 1000
+    body_frame: "base_link"
+    print_status: true

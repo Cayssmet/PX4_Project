@@ -1,0 +1,24 @@
+flight_controller_bridge:
+  ros__parameters:
+    # 只用于真实USB-TTL无桨V2验收；生产配置当前也已显式切换为V2。
+    protocol_version: 2
+    serial_device: "/dev/serial/by-path/platform-xhci-hcd.1-usb-0:1:1.0-port0"
+    baud_rate: 115200
+    send_rate_hz: 50.0
+    reconnect_interval_ms: 1000
+    flight_feedback_timeout_ms: 300
+    max_ack_lag_frames: 10
+    require_flight_feedback_before_control: true
+
+    body_frame: "base_link"
+    map_frame: "map"
+    pid_command_timeout_ms: 300
+    directive_timeout_ms: 500
+    new_target_pid_guard_ms: 100
+
+    max_linear_speed: 1.5
+    max_vertical_speed: 0.5
+    max_yaw_rate: 2.0
+    min_target_height: 0.1
+    max_target_height: 1.7
+    print_status: true
