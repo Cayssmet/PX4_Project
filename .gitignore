@@ -10,6 +10,11 @@ build/
 install/
 log/
 
+# ---------- 第三方拉取的包（不入库，用脚本按版本拉）----------
+# px4_msgs 必须与飞控固件版本严格对应，且是生成出来的大包。
+# 用 tools/setup_px4_msgs.sh 拉到 src/px4_msgs/，不要提交。
+src/px4_msgs/
+
 # ---------- Python ----------
 __pycache__/
 *.py[cod]

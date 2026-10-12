@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>px4_offboard</name>
+  <version>2.0.0</version>
+  <description>PX4 1.17 + uXRCE-DDS 伴飞适配层：ENU/FLU 与 NED/FRD 坐标换算、PX4 专用 QoS、位姿上行与 offboard 下行节点。取代 flight_controller_bridge 的位置，对上层保持 /flight/command 与 /flight/status 接口不变。</description>
+
+  <maintainer email="ljz@example.com">ljz</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>geometry_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>uav_interfaces</depend>
+
+  <!-- px4_msgs 不随本仓库分发，用 tools/setup_px4_msgs.sh 拉取 release/1.17 分支。
+       v2.0.0 只含纯数学库与 QoS 助手，**刻意不声明 px4_msgs 依赖**，这样不装 px4_msgs
+       也能单独编译和跑单元测试。等下一个版本加入真正收发 /fmu/* 话题的节点时，
+       在这里补一行 <depend>px4_msgs</depend>，并在 CMakeLists.txt 加 find_package。 -->
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
