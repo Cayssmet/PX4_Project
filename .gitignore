@@ -38,3 +38,6 @@ venv/
 *.swp
 .DS_Store
 Thumbs.db
+
+# 本地 Python 依赖（由 tools/mavlink_usb_udp_bridge.py 使用，不入库）
+tools/.pylibs/
