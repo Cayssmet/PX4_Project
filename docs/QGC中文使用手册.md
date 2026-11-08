@@ -283,6 +283,85 @@ QGC 的界面就三块，别被吓到：
 
 ---
 
+## 9. 执行器页变空壳 / 电机测试报"命令不支持"（★ 2026-11-08 实测定案）
+
+这是本项目踩过的最隐蔽的一个坑：**飞控一切正常、参数能改、能解锁能飞，唯独 Actuators 页只剩一小块"电机 config"，没有每路输出的滑块，点电机测试还报 `MAV_CMD_DO_MOTOR_TEST` 命令不支持。**
+
+### 9.1 症状
+
+| 现象 | 细节 |
+|---|---|
+| Actuators 页只剩"电机 config" | 有几何/转向的下拉框，**没有每路输出的滑块和 Enable 开关** |
+| 点电机测试报错 | `MAV_CMD_DO_MOTOR_TEST` 命令不支持 |
+| 其它一切正常 | 参数页能读写、能解锁、能飞、光流测距都正常 |
+
+### 9.2 根因
+
+**`MAV_PROTO_VER` 被设成了 1（Always use version 1）。**
+
+PX4 在 MAVLink v1 通道上**不再发送 `COMPONENT_INFORMATION` 报文**（就是"组件信息/执行器元数据"那套东西）。QGC 拿不到执行器元数据，就建不出新的执行器界面，于是**退回它内置的旧版电机测试通道**——而旧通道用的 `MAV_CMD_DO_MOTOR_TEST`（209）**在 PX4 1.17 里已经被删掉了**（只保留 `MAV_CMD_ACTUATOR_TEST`，310）。所以旧界面也点不动。
+
+把 `MAV_PROTO_VER` 改回 **2** 并重启飞控，界面立刻恢复。
+
+### 9.3 证据（当时怎么确认的，供日后复核）
+
+| 证据 | 数据 |
+|---|---|
+| tlog 报文统计 | `MAV_PROTO_VER=1` 期间，**10 个会话全部**：`COMPONENT_INFORMATION` 收到 0 条、MAVFTP(`FILE_TRANSFER_PROTOCOL`) 0 次 |
+| 请求有回、数据没发 | QGC 发 `MAV_CMD_REQUEST_MESSAGE`(512) 请求 msgid 395/397，飞控回 `COMMAND_ACK result=0 (ACCEPTED)`，**但从不发对应消息** |
+| 电机测试命令变了 | 09:37（PROTO_VER=2）：`MAV_CMD_ACTUATOR_TEST`(310) ×233 次，全部 ACCEPTED；20:20（PROTO_VER=1）：`MAV_CMD_DO_MOTOR_TEST`(209) ×1，返回 `result=3 UNSUPPORTED` |
+| 元数据缓存时间戳（最硬的证据） | `QGCCompInfoCache\*.meta` 四个类型停在 `11:21:22–11:21:25`；改回 2 后**同一分钟内全部刷新到 20:43:18–20:43:22** |
+| 排除"参数没下完" | `%APPDATA%\QGroundControl\ParamCache\1_1.v2` 当天 20:20:44 就已写好（44,360 B），参数早就就绪 |
+
+### 9.4 修法（1 分钟）
+
+1. QGC → **Vehicle Setup → Parameters**，搜索框输 `MAV_PROTO_VER`，双击改成 **2（Always use version 2）**
+2. **Tools → Reboot Vehicle**，等 30 秒让飞控重启完
+3. **完全退出 QGC，再重新打开**，连上后**等满 60 秒**（元数据是连上后异步下载的）
+4. 再进 Actuators 页
+
+> ⚠ 改完一定要**重启飞控**。`MAV_PROTO_VER` 走的是 mavlink 实例启动路径，不重启不生效。
+
+### 9.5 ★ 不要为了 MTF-01 把 `MAV_PROTO_VER` 降到 1
+
+MicoAir 官方文档里写着「PX4 1.17.x 起需要在微空助手里把协议设成 `MAVLink (PX4)`，并设置 `MAV_PROTO_VER = 1`」。**后半句只对 `AUTO`（自动识别）模式有意义。**
+
+本项目实测：在微空助手里**显式选了 `MAVLink (PX4)`** 之后，`MAV_PROTO_VER=2` 时光流和测距完全正常——
+
+- PROTO_VER=1 期间：`DISTANCE_SENSOR` 5883 条 / `OPTICAL_FLOW_RAD` 5883 条
+- PROTO_VER=2 期间：同样都有数据
+
+⇒ **PX4 解析 `OPTICAL_FLOW_RAD` / `DISTANCE_SENSOR` 与 MAVLink 版本无关，只与"传感器是否真的在发 MAVLink"有关。** 为了让光流工作而把全链路降到 v1，代价是丢掉整个组件信息通道（执行器界面、事件元数据等），不值得。
+
+### 9.6 怎么判断"元数据这次到底下来没有"
+
+不用看界面，直接看文件时间戳：
+
+```powershell
+Get-ChildItem "$env:LOCALAPPDATA\QGroundControl\QGroundControl\cache\QGCCompInfoCache" -Filter "*.meta" |
+  Sort-Object LastWriteTime -Descending | Select-Object -First 4 LastWriteTime, Name
+```
+
+四个 `.meta` 分别是 `_00_`(GENERAL) / `_01_`(PARAMETER) / `_04_`(EVENTS) / `_05_`(ACTUATORS)。**它们在你连上后的几十秒内一起刷新 = 整条组件信息链路通了**；如果都停在上一次的时间，就是没通。
+
+### 9.7 界面救不回来时，功能完全等价的命令行
+
+QGC 的 `Analyze → MAVLink Console` 里（**必须拆桨、必须未解锁**）：
+
+```
+param show PWM_MAIN_FUNC*              # 1~4 号输出分别接了什么（本项目应为 101/102/103/104）
+param set PWM_MAIN_FUNC1 103           # 例：把 MAIN1 改成 3 号电机
+param save                             # ★ 必须，否则重启就丢
+actuator_test set -m 1 -v 0.1 -t 2     # 1 号电机 10% 油门转 2 秒
+actuator_test iterate-motors           # 依次把每个电机点一遍
+actuator_test stop                     # 立即停
+listener actuator_outputs              # 看四路实际输出
+```
+
+`actuator_test` 的 `-v` 取 −1..1（负值反转，需要 `CA_R_REV` 里那一路是 3D 模式），`-t` 不填则一直转到你按回车。这套命令和界面滑块走的是同一条 `actuator_test` uORB 通道，效果完全一样，只是要点键盘。
+
+---
+
 ## 附录 A：为什么这份 QGC 没有中文
 
 核查过程与结果（供日后复核）：
