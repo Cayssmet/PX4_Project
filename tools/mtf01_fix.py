@@ -77,8 +77,7 @@ def connect(port, baud, timeout=25.0):
         return None
     print("[ok] 心跳：sysid=%d compid=%d autopilot=%d type=%d"
           % (master.target_system, master.target_component,
-             master.mavlink.autopilot if hasattr(master.mavlink, "autopilot") else -1,
-             hb.type))
+             hb.autopilot, hb.type))
     return master
 
 
