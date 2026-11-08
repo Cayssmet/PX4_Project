@@ -109,6 +109,16 @@ def udp_to_serial():
             data, _addr = sock.recvfrom(4096)
         except socket.timeout:
             continue
+        except (ConnectionResetError, ConnectionAbortedError):
+            # Windows 上这是"刚才 sendto 的目的端口没人监听，收到了 ICMP 端口不可达"
+            # （典型情况：QGC 还没起来）。属于正常现象，静默即可 —— 否则 QGC 没启动的
+            # 那几秒会刷几千行，把真正的统计信息淹没。
+            continue
+        except OSError as exc:
+            if getattr(exc, "winerror", None) in (10054, 10055):
+                continue
+            print(f"[bridge] UDP 接收异常: {exc}", flush=True)
+            continue
         except Exception as exc:
             print(f"[bridge] UDP 接收异常: {exc}", flush=True)
             continue
