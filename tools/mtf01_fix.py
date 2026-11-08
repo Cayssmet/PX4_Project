@@ -43,9 +43,16 @@ TARGET = (1, 1)  # sysid 1 / compid 1（AUTOPILOT）
 
 # 需要核对的光流/测距相关参数
 WATCH = [
-    "MAV_PROTO_VER", "MAV_2_CONFIG", "MAV_2_MODE", "MAV_2_RATE",
-    "SER_TEL4_BAUD", "SER_TEL1_BAUD",
+    # 协议版本与 MAVLink 实例（光流走 MAV_1 = TELEM2 = UART4 = /dev/ttyS3）
+    "MAV_PROTO_VER",
+    "MAV_1_CONFIG", "MAV_1_MODE", "MAV_1_RATE", "MAV_1_FORWARD", "MAV_1_FLOW_CTRL",
+    "MAV_2_CONFIG", "MAV_2_MODE", "MAV_2_RATE",
+    # 串口波特率
+    "SER_TEL1_BAUD", "SER_TEL2_BAUD", "SER_TEL3_BAUD", "SER_TEL4_BAUD", "SER_URT6_BAUD",
+    # EKF2 光流/测距/高度源
     "EKF2_OF_CTRL", "EKF2_RNG_CTRL", "EKF2_HGT_REF",
+    "EKF2_OF_DELAY", "EKF2_OF_QMIN", "EKF2_RNG_A_VMAX", "EKF2_RNG_A_HMAX",
+    # 驱动层流/测距使能（PX4 内置驱动，MTF-01 是外部 MAVLink 外设，这些都应为 0）
     "SENS_FLOW_ROT", "SENS_TFLOW_CFG",
 ]
 
@@ -66,11 +73,29 @@ def decode_param_value(enc_type, raw):
     return raw
 
 
-def connect(port, baud, timeout=25.0):
+def connect(port, baud, timeout=25.0, attempts=6):
+    """打开串口并等心跳。
+
+    Windows 上串口是"谁先拿到谁独占"，而且上一个进程刚 close 时句柄未必立刻释放，
+    所以这里做指数式重试而不是一次失败就退出。
+    """
     print("[..] 连接 %s @ %d ..." % (port, baud))
     # 不能用 mavlink_connection()：它会按设备名猜类型，Windows 的 COM9 会被
     # 当成日志文件去 open()，直接抛 PermissionError。显式用 mavserial。
-    master = mavutil.mavserial(port, baud=baud, autoreconnect=False)
+    last_err = None
+    master = None
+    for i in range(1, attempts + 1):
+        try:
+            master = mavutil.mavserial(port, baud=baud, autoreconnect=False)
+            break
+        except Exception as exc:
+            last_err = exc
+            print("      第 %d/%d 次打开失败：%s" % (i, attempts, exc))
+            time.sleep(1.5 * i)
+    if master is None:
+        print("[!!] 串口打不开：%s" % last_err)
+        print("     多半是 QGC 或桥还占着这个口。先停掉它们再试。")
+        return None
     hb = master.wait_heartbeat(timeout=timeout)
     if hb is None:
         print("[!!] 等不到心跳")

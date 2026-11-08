@@ -38,8 +38,14 @@ if "%PYTHON%"=="" set "PYTHON=python"
 if not exist "%BRIDGE%" goto :no_bridge
 if defined UAV_DRY_RUN goto :dry_run
 
-echo [1/2] Starting bridge: %COMPORT% -^> udp://127.0.0.1:14550
-start "MAVLink USB-UDP bridge" /min "%PYTHON%" -u "%BRIDGE%" %COMPORT% 115200 127.0.0.1 14550 14551
+REM The bridge is launched through a supervisor loop so that an unexpected
+REM crash does not silently take QGC down with it (QGC never reconnects on its
+REM own because UDP is connectionless - the socket just stops receiving).
+set "SUPERVISOR=%HERE%bridge_supervise.cmd"
+if not exist "%SUPERVISOR%" goto :no_supervisor
+
+echo [1/2] Starting bridge under supervisor: %COMPORT% -^> udp://127.0.0.1:14550
+start "MAVLink USB-UDP bridge" /min "%SUPERVISOR%" %COMPORT% 115200
 
 REM Give the bridge 2 seconds to take the COM port first, otherwise QGC may
 REM grab the serial port on startup and fall back into the broken code path.
@@ -63,6 +69,11 @@ echo [ERROR] bridge script not found: %BRIDGE%
 pause
 exit /b 1
 
+:no_supervisor
+echo [ERROR] supervisor not found: %SUPERVISOR%
+pause
+exit /b 1
+
 :no_qgc
 echo [WARN] not found: %QGC_EXE%
 echo [HINT] expected QGC at D:\09_PX4\QGroundControl\bin\QGroundControl.exe
@@ -77,4 +88,5 @@ echo [dry-run] COMPORT    = %COMPORT%
 echo [dry-run] QGC_EXE    = %QGC_EXE%
 if exist "%QGC_EXE%" (echo [dry-run] QGC found = yes) else (echo [dry-run] QGC found = no)
 if exist "%BRIDGE%"  (echo [dry-run] bridge found = yes) else (echo [dry-run] bridge found = no)
+if exist "%HERE%bridge_supervise.cmd" (echo [dry-run] supervisor found = yes) else (echo [dry-run] supervisor found = no)
 exit /b 0
