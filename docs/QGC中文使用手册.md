@@ -343,6 +343,46 @@ Get-Item "$env:APPDATA\QGroundControl\ParamCache\1_1.v2" | Select-Object LastWri
 
 **串口直连的局限**：它不热插拔。拔掉飞控再插回来，QGC 不一定会自动重连，需要手动 Disconnect → Connect，或者干脆重启 QGC。这一点上桥反而更强（`bridge_supervise.cmd` 会自动等、自动重连）。
 
+### 8.8 一键启动器（2026-11-09 新增，以后就用这个）
+
+**双击 `PX4_Project\tools\启动QGC_自动连接.cmd` 就行**，不用再手工改 ini、猜端口。
+
+它做四件事：
+
+1. **按 USB VID/PID 找飞控"当前"的串口**（不再假设永远是 COM9）
+2. 杀掉卡死的 QGC 残留进程，等串口真的释放
+3. 把端口写进 `QGroundControl.ini` 的 `FC-USB` 链路（写完回读校验）
+4. 启动 QGC，**盯 `ParamCache\1_1.v2` 的时间戳确认"真的连上了"**；失败自动重试一次
+
+输出长这样就是成功（2026-11-09 21:47 实测 14 秒连上）：
+
+```
+OK flight controller found on COM9  (USB\VID_1B8C&PID_0036\0)
+  OK link port set to COM9 (read-back verified)
+  Launching QGC ...
+  OK connected for real at 21:47:18 (parameters downloaded, 14 s)
+```
+
+**为什么不能写死 COM9**：这块飞控有**两个 USB 身份**
+
+| InstanceId | 含义 | Status |
+|---|---|---|
+| `USB\VID_1B8C&PID_0036\0` | PX4 **应用固件**在跑（正常，能连） | OK |
+| `USB\VID_3162&PID_004B\0` | MicoAir 自己的 VID（多半是 **bootloader**，PX4 没跑） | Unknown |
+
+如果它落到 `VID_3162` 那一侧，QGC 死活连不上是必然的——**那不是 QGC 的问题，是飞控没启动到固件**。脚本会明确告诉你这一点，而不是让你在那儿反复关开 QGC。
+
+**两个会导致"静默连不上"的陷阱（脚本已避坑）**：
+
+1. **`portName` 的转义**：真实端口名是 `\\.\COM9`，但 QSettings 会把每个反斜杠再转义一次，所以 ini 里必须写成
+   ```
+   Link0\portName=\\\\.\\COM9
+   ```
+   （4 个反斜杠 + `.` + 2 个反斜杠 + `COM9`）。**少一个反斜杠 QGC 就打不开端口，而且不报任何错**，表现就是"连不上"。
+2. **参数下载竞态**：连上之后要等参数表下完（实测 13–18 秒）再进 Actuators 页，否则页面会被永久清空。见第 9 节。
+
+**脚本为什么是纯 ASCII（英文提示语）**：Windows PowerShell 5.1 读 `.ps1` 时按 OEM 代码页（本机是 GBK）解码，**除非文件带 UTF-8 BOM**；而任何一次编辑都可能把 BOM 弄丢，之后中文全变乱码、整份脚本语法报错。改成纯 ASCII 后，BOM 有没有都不影响。同理，`.cmd` 文件也必须纯 ASCII（cmd.exe 用 OEM 代码页解析批处理）。
+
 ## 9. 执行器页变空壳 / 电机测试报"命令不支持"
 
 > ### ⚠ 2026-11-09 重要更正：根因不是 `MAV_PROTO_VER`
