@@ -299,6 +299,50 @@ QGC 的界面就三块，别被吓到：
 
 ---
 
+### 8.7 串口直连模式（2026-11-09 起改为主用）
+
+**为什么改**：QGC 的 Sensors 校准页会对"网络链路"弹警告（*用 WIFI 连接的方式校准传感器已被证实是不可靠的*）。走 UDP 桥时 QGC 看到的是一条网络链路，校准时序不可靠。所以**校准和日常都改走 USB 串口直连**，桥降级为备用。
+
+**当前配置**（`%APPDATA%\QGroundControl\QGroundControl.ini`）：
+
+```ini
+[LinkConfigurations]
+count=1
+Link0\name=FC-USB
+Link0\type=0
+Link0\auto=true
+Link0\baud=115200
+Link0\portName=\\\\.\\COM9
+Link0\portDisplayName=COM9
+[AutoConnect]
+autoConnectPixhawk=false     ← 关掉，避免它和 FC-USB 抢同一个 COM9
+autoConnectUDP=false         ← 关掉，避免它去连桥
+```
+
+桥那边：`PX4_QGC_Bridge` 计划任务已 **Disabled**，python 桥进程已停。要恢复桥：
+
+```powershell
+Enable-ScheduledTask -TaskName PX4_QGC_Bridge
+```
+
+**★ 判断"这一次是真的连上了"的硬指标**（别只看界面显示）：
+
+```powershell
+Get-Item "$env:APPDATA\QGroundControl\ParamCache\1_1.v2" | Select-Object LastWriteTime
+```
+
+连上后 **15–20 秒内这个时间戳应该变新**（参数表下完了）。
+
+**★★ 已知故障：QGC 有时"占着串口但一个字节都不读"**
+
+- 现象：`COM9` 确实被 QGC 占着（别的程序打不开），但界面显示未连接、`ParamCache` 时间戳不动、也不产生新 tlog。
+- 判定方法：把 QGC 关掉，直连 COM9 嗅探 3 秒。实测正常值是 **约 20 KB/s、上千个 MAVLink 帧头**。如果飞控在发而 QGC 就是不读，就是 QGC 的问题。
+- **处理：任务管理器里结束 `QGroundControl.exe`，重开。最多试 2–3 次。** 不要动线、不要重刷固件。
+- 2026-11-09 21:24 实测：该实例占口 80 秒零字节；杀掉重开后 **12 秒**就连上了（`ParamCache` 刷新）。
+- 这和 9 节那个执行器页 latch 属于同一类问题——**QGC 5.0.8 在 Windows 上会偶发进入坏状态，重启进程几乎总能救回来。**
+
+**串口直连的局限**：它不热插拔。拔掉飞控再插回来，QGC 不一定会自动重连，需要手动 Disconnect → Connect，或者干脆重启 QGC。这一点上桥反而更强（`bridge_supervise.cmd` 会自动等、自动重连）。
+
 ## 9. 执行器页变空壳 / 电机测试报"命令不支持"
 
 > ### ⚠ 2026-11-09 重要更正：根因不是 `MAV_PROTO_VER`
