@@ -241,19 +241,35 @@ QGC 的界面就三块，别被吓到：
 
 **关掉这个窗口 = 桥停止 = QGC 掉线。** 要停就先关 QGC 再关它。
 
-### 8.3 三条铁律（违反任何一条都会"又连不上"）
+### 8.2b 开机自动起桥（不需要管理员）
+
+桥必须**早于 QGC** 拿到 COM9，而重启后一切归零。两种做法：
+
+| 做法 | 是否需要管理员 | 说明 |
+|---|---|---|
+| ★ **启动文件夹**（已安装） | 不需要 | `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\PX4_QGC_Bridge.cmd`，登录时自动最小化起桥 |
+| 计划任务 `/sc onlogon` | **需要**（`schtasks` 会报 `ERROR: Access is denied.`） | 若想改用这个，用管理员 PowerShell 执行 |
+| 计划任务 `/sc once`（当前 `PX4_QGC_Bridge`） | 不需要 | **不会自启**，只能 `schtasks /run /tn PX4_QGC_Bridge` 手动拉；重启后是 `Ready` 而不是 `Running` |
+
+> ⚠ **只保留一种方式**。若启动文件夹和计划任务同时生效，第二个实例抢不到 COM9，会在 2 秒重试循环里刷屏。
+
+### 8.3 四条铁律（违反任何一条都会"又连不上"）
 
 | # | 铁律 | 违反后的症状 |
 |---|---|---|
 | 1 | QGC → 应用程序设置 → 常规：**「Pixhawk」自动连接必须不勾、「UDP」必须勾** | QGC 开机就去抢 COM9 → 独占而不读 → 别的程序全部 `拒绝访问` |
-| 2 | **永远不要**在 QGC 的 Comm Links 页面连 COM9 | 直接把桥踢掉，QGC 自己反而读不到数据 |
-| 3 | **任何别的程序都不许占 COM9** —— 探针脚本、串口助手、第二个 QGC 实例、Arduino IDE 全算 | 桥的串口被抢 → 桥读异常 → QGC 掉线，而且你看到的是"COM9 拒绝访问"这种误导性报错 |
+| 2 | **Comm Links 里那条 `FC-USB`（指向 COM9）必须彻底删掉，不是取消勾选** | 它带 `Link0\auto=true`，QGC 一启动就去开 COM9；桥拿不到口 → 桥一直"等待串口" → QGC 收不到任何数据，表现为"连不上"，而 `Comm Links` 里断开重连**完全无效** |
+| 3 | **永远不要**在 QGC 的 Comm Links 页面连 COM9（新建也不行） | 直接把桥踢掉，QGC 自己反而读不到数据 |
+| 4 | **任何别的程序都不许占 COM9** —— 探针脚本、串口助手、第二个 QGC 实例、Arduino IDE 全算 | 桥的串口被抢 → 桥读异常 → QGC 掉线，而且你看到的是"COM9 拒绝访问"这种误导性报错 |
 
-> ⚠ 已两次踩到铁律 1：QGC 会**把 ini 里的设置改回去**。若又连不上，先查
-> `%APPDATA%\QGroundControl\QGroundControl.ini` 里这四行：
-> `autoConnectPixhawk` 必须是 `false`、`autoConnectUDP` 必须是 `true`、
-> `Link0\auto` 必须是 `false`、`Link0\portName` 必须是 `COM9`（不要 `\\.\COM9`）。
-> 改之前先备份成 `QGroundControl.ini.bakN`。
+> ⚠ 已三次踩到铁律 1/2：QGC 会**把 ini 里的设置改回去**。若又连不上，先查
+> `%APPDATA%\QGroundControl\QGroundControl.ini`：
+> - `autoConnectPixhawk` 必须是 `false`、`autoConnectUDP` 必须是 `true`
+> - `[LinkConfigurations]` 里应该是 **`count=0`**，且**不应存在任何 `Link0\` 键**
+>
+> 改之前先备份成 `QGroundControl.ini.bakN`。改的时候 **QGC 必须是关掉的**，否则它退出时会把 ini 再写回去。
+>
+> **为什么"断开重连"没用**：那条链路是"串口链路"，而 QGC 在串口上根本不工作；而正常通路是 UDP 自动连接，它不在 Comm Links 列表里，所以在列表里点 Disconnect/Connect 影响不到它。
 
 ### 8.4 怎么判断"这一次是真的连上了"
 
