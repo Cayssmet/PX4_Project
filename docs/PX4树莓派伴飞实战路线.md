@@ -253,7 +253,7 @@ H743 的 UART 和树莓派 GPIO 都是 **3.3V 电平**，可以直连，**不需
 ### 坑 4：UART8 被板载蓝牙占了
 
 见第 3 节串口映射表——`TELEM4`（UART8）内部接了蓝牙数传，默认 115200。
-**给派选 TELEM1 或 TELEM2。**
+**给派选 TELEM3。**（TELEM1 留给 QGC 遥测，TELEM2 已给 MTF-01 光流，只剩 TELEM3。）
 
 ---
 
@@ -264,35 +264,49 @@ H743 的 UART 和树莓派 GPIO 都是 **3.3V 电平**，可以直连，**不需
 | PX4 设备 | PX4 接口名          | 物理接口 | 建议用途                     |
 | -------- | ------------------- | -------- | ---------------------------- |
 | `ttyACM0`| USB                 | USB-C    | 调试 / QGC                   |
-| `ttyS0`  | `TELEM1`            | UART1    | 数传电台 → QGC               |
+| `ttyS0`  | `TELEM1`            | UART1    | `MAV_0_CONFIG=101` → QGC 遥测 |
 | `ttyS1`  | `GPS2`              | UART2    | DisplayPort（图传）          |
 | `ttyS2`  | `GPS1`              | UART3    | GPS（你现在没装）            |
-| **`ttyS3`** | **`TELEM2`**     | **UART4**| **★ 接树莓派**               |
-| `ttyS4`  | `TELEM3`            | UART5    | 备用                         |
+| `ttyS3`  | `TELEM2`            | UART4    | **MTF-01 光流**（`MAV_1_CONFIG=102`）|
+| **`ttyS4`** | **`TELEM3`**     | **UART5**| **★ 接树莓派**               |
 | `ttyS5`  | `RC`                | UART6    | FS-iA10B SBUS（已占用）      |
 | `ttyS6`  | `URT6`              | UART7    | 电调遥测                     |
-| `ttyS7`  | `TELEM4`/`SERIAL4`  | UART8    | ⚠ 与板载蓝牙共用，别接派     |
+| `ttyS7`  | `TELEM4`/`SERIAL4`  | UART8    | ⚠ `MAV_2_CONFIG=104` 板载蓝牙，别接派 |
+
+> ★ 2026-11 变更：早前计划用 TELEM2 接派，但 **TELEM2 后来给了 MTF-01 光流**，所以改到 TELEM3。
 
 ### 3.2 参数清单（QGC → Parameters）
 
+**M1 只改这三项：**
+
 | 参数              | 建议值                | 作用                                                                 |
 | ----------------- | --------------------- | -------------------------------------------------------------------- |
-| `UXRCE_DDS_CFG`   | `TELEM2`              | 在该串口启用 uXRCE-DDS **client**（枚举值以 QGC 下拉框为准，别背数字） |
-| `SER_TEL2_BAUD`   | `921600`              | TELEM2 波特率，必须和派端 Agent 的 `-b` 一致                          |
-| `MAV_1_CONFIG`    | **`0`**               | ⚠ 默认可用的 MAV_1 就占着 TELEM2 跑 MAVLink，**必须清零**才能腾给 XRCE |
-| `MAV_0_CONFIG`    | `TELEM1`（保持默认）  | 数传/QGC 继续走 TELEM1                                                |
+| `UXRCE_DDS_CFG`   | `TELEM3`              | 在该串口启用 uXRCE-DDS **client**（枚举值以 QGC 下拉框为准，别背数字） |
+| `SER_TEL3_BAUD`   | `921600`              | TELEM3 波特率，必须和派端 Agent 的 `-b` 一致。★ 静默失败第一名，且在 `UXRCE_DDS_CFG` 设好重启前可能不存在 |
+| `UXRCE_DDS_SYNCT` | `1`（默认）           | 客户端/Agent 时间戳同步，**别关**                                     |
+
+**保持现状、一项都别动：**
+
+| 参数              | 当前值                | 动它会怎样                                                           |
+| ----------------- | --------------------- | -------------------------------------------------------------------- |
+| `MAV_0_CONFIG`    | `101`（TELEM1）       | QGC 遥测可能掉                                                        |
+| **`MAV_1_CONFIG`**| **`102`（TELEM2）**   | ★ **光流直接失效。早期文档写的「置 0」已作废**                        |
+| `SER_TEL2_BAUD`   | `115200`              | MTF-01 固定 115200，改了就收不到光流                                  |
+| `MAV_2_CONFIG`    | `104`（TELEM4）       | 板载蓝牙数传掉线                                                      |
 | `UXRCE_DDS_PRT`   | `8888`（默认）        | Agent 的 UDP 端口（仅以太网方案用）                                   |
 | `UXRCE_DDS_AG_IP` | `2130706433`（默认）  | = `127.0.0.1`。只吃十进制 int32，**不支持点分格式**（仅以太网方案用）  |
-| `UXRCE_DDS_SYNCT` | `1`（默认）           | 客户端/Agent 时间戳同步，**别关**                                     |
 | `UXRCE_DDS_KEY`   | `1`（默认）           | 多机共用一个 Agent 时每机必须唯一非零                                 |
-| `COM_RC_OVERRIDE` | **显式启用（含 offboard）** | ⚠ **offboard 下默认不生效**，不改就打杆夺不回控制权（见 M3）      |
-| `COM_RC_STICK_OV` | 默认                  | 触发夺权的杆量阈值                                                    |
-| `COM_OF_LOSS_T`   | `0.5`（默认）         | 断流多久退出 offboard                                                 |
-| `COM_OBL_RC_ACT`  | `0` = Position        | 退出 offboard 后进哪个模式：0 Position / 1 Altitude / 2 Manual / 3 Return / 4 Land |
 
-> **更省事的替代方案**：把 XRCE 放到 **TELEM3**（UART5，`/dev/ttyS4`）。
-> TELEM3 默认没有 MAVLink 占用，只需 `UXRCE_DDS_CFG=TELEM3` + `SER_TEL3_BAUD=921600`，
-> **一个 MAVLink 参数都不用动**。新手更推荐这条，少一个出错点。
+**offboard 阶段（M4）另外要改的：**
+
+| 参数              | 建议值                | 作用                                                                 |
+| ----------------- | --------------------- | -------------------------------------------------------------------- |
+| `COM_RC_OVERRIDE` | **`3`**               | ⚠ **offboard 下默认不生效**（出厂值 1 只开 bit0），打杆夺不回控制权     |
+| `COM_RC_STICK_OV` | 默认 `30`（%）        | 触发夺权的杆量阈值                                                    |
+| `COM_OF_LOSS_T`   | `1.0`（默认）         | 断流多久退出 offboard                                                 |
+| `COM_OBL_RC_ACT`  | `4` = Land（建议）    | 退出 offboard 后进哪个模式：0 Position / 1 Altitude / 2 Stabilized / 3 Return / 4 Land / 5 Hold / 6 Terminate / 7 Disarm。室内无 GPS 时选 4 |
+
+> TELEM3 的好处：**一个 MAVLink 参数都不用动**（默认没有 MAVLink 实例占用它），少两个出错点。
 
 ### 3.3 飞控侧验收（不接派，先自己过一遍）
 
@@ -374,11 +388,14 @@ ls -l /dev/serial* /dev/ttyAMA*        # 先看清哪个是 PL011
 
 ## 5. 里程碑 M1：链路打通（最先做，最有成就感）
 
-1. **接线**：飞控 TELEM2 的 `TX→派 RX(GPIO15)`、`RX→派 TX(GPIO14)`、`GND→GND`。
-   共地是硬要求。
-2. **飞控端**：`UXRCE_DDS_CFG=TELEM2`、`SER_TEL2_BAUD=921600`、
-   **`MAV_1_CONFIG=0`**，然后重启飞控。三条缺一不可，尤其最后一条——
-   MAV_1 默认就占着 TELEM2 跑 MAVLink，不清零 XRCE 起不来。
+1. **接线**：飞控 **TELEM3** 的 `TX→CH340 RX`、`RX→CH340 TX`、`GND→GND`，
+   CH340 插派 USB（用你现有 udev 规则锁定的那个口 → `/dev/flight_controller`）。
+   共地是硬要求。**不要从飞控 5V BEC 给派供电**（只有 3 A）。
+2. **飞控端**：`UXRCE_DDS_CFG=TELEM3`、`SER_TEL3_BAUD=921600`、
+   `UXRCE_DDS_SYNCT=1`，然后重启飞控。
+   > ⚠ **不要再动 `MAV_1_CONFIG`**！它现在是 `102`，正是 MTF-01 光流的通路。
+   > 早期文档写的「`MAV_1_CONFIG=0` 腾出 TELEM2」是 TELEM2 还没给光流时的做法，**已作废**。
+   > TELEM3 默认本来就没有 MAVLink 实例，所以一个 MAVLink 参数都不用改。
 
 3. **派端编译安装 Agent**：
 
@@ -393,7 +410,7 @@ sudo make install && sudo ldconfig /usr/local/lib/
    > **与最新的 v3.x Agent 不兼容**（v3.x 连上来了但建不出 topic）。
    > ROS 2 **Jazzy → Agent v2.4.3**；**Humble → Agent v2.4.2**。
 
-4. **启动 Agent**（串口模式，`-b` 必须等于 `SER_TEL2_BAUD`）：
+4. **启动 Agent**（串口模式，`-b` 必须等于 `SER_TEL3_BAUD`）：
 
 ```bash
 sudo MicroXRCEAgent serial --dev /dev/fc -b 921600
@@ -654,7 +671,7 @@ XRCE-DDS 不是"所有 uORB 话题都对派开放"，而是由飞控源码里的
 │  /fmu/in/vehicle_odometry      /fmu/in/trajectory_setpoint       │
 │  「我在哪」← 关键！              「去哪」                          │
 └──────┬───────────────────────────────────┬──────────────────────┘
-       │        uXRCE-DDS / UART (TELEM2/3)│
+       │        uXRCE-DDS / UART (TELEM3)  │
 ┌──────▼───────────────────────────────────▼──────────────────────┐
 │                      PX4 飞控 (MicoAir743v2)                     │
 │   EKF2 融合外部位姿 → 位置估计 → 位置控制器 → 姿态/角速率环 → 电机 │

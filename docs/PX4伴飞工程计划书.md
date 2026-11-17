@@ -515,14 +515,27 @@ if (offboard_setpoint_counter_ < 11) offboard_setpoint_counter_++;
 
 ### 11.1 链路（M1）
 
+> ★ **2026-11 变更：树莓派改用 TELEM3。** 原因是 TELEM2 已被 **MTF-01 光流**占用（`MAV_1_CONFIG = 102`）。详见 `MTF-01光流测距接入实录.md` §8 与 `M1_操作手册_派能读飞控.md`。
+
 | 参数 | 建议值 | 作用 |
 | --- | --- | --- |
-| `UXRCE_DDS_CFG` | 选 **TELEM2**（在 QGC 下拉框里**按名称选**，不用记枚举值） | XRCE 客户端走哪个串口。源码 `src/modules/uxrce_dds_client/module.yaml` 的 `serial_config.port_config_param.name` 就是它 |
-| **所选串口的波特率**（QGC 标签 "TELEM2 Baudrate"，参数名 **`SER_TEL2_BAUD`**） | **921600** | ★ **必须显式改，这是 M1 最容易漏的一项。** 模块启动行原文：`set UXRCE_DDS_ARGS "-t serial -d ${SERIAL_DEV} -b p:${BAUD_PARAM}"`，`${BAUD_PARAM}` 会展开成**所选串口的波特率参数名**——选 TELEM2 就吃 `SER_TEL2_BAUD`。默认一般只有 57600，与 Agent 的 `-b 921600` 不一致时**一个 topic 都收不到，且不报错** |
-| `MAV_1_CONFIG` | **0** | ★ 官方默认 **MAV_1 = TELEM2** 给伴飞电脑发 MAVLink。**必须禁掉，否则和 XRCE 抢同一个串口**。原文："Disable by setting `MAV_0_CONFIG=0` or `MAV_1_CONFIG=0` to zero." |
+| `UXRCE_DDS_CFG` | 选 **TELEM3**（在 QGC 下拉框里**按名称选**，不用记枚举值） | XRCE 客户端走哪个串口。源码 `src/modules/uxrce_dds_client/module.yaml` 的 `serial_config.port_config_param.name` 就是它 |
+| **所选串口的波特率**（QGC 标签 "TELEM3 Baudrate"，参数名 **`SER_TEL3_BAUD`**） | **921600** | ★ **必须显式改，这是 M1 最容易漏的一项。** 模块启动行原文：`set UXRCE_DDS_ARGS "-t serial -d ${SERIAL_DEV} -b p:${BAUD_PARAM}"`，`${BAUD_PARAM}` 会展开成**所选串口的波特率参数名**——选 TELEM3 就吃 `SER_TEL3_BAUD`。与 Agent 的 `-b 921600` 不一致时**一个 topic 都收不到，且不报错**。该参数可能要在 `UXRCE_DDS_CFG` 设好并重启后才出现 |
+| **`MAV_1_CONFIG`** | **保持 `102`（TELEM2）不动** | ★ **早期版本写的「置 0」已作废** —— 那个做法是「TELEM2 还没给光流」时的。现在 `MAV_1_CONFIG=102` 正是 MTF-01 的通路，置 0 = 光流失效 |
+| `SER_TEL2_BAUD` | 保持 `115200` | MTF-01 固定 115200 |
+| `MAV_0_CONFIG` | 保持 `101`（TELEM1） | QGC 遥测，别动 |
 | `UXRCE_DDS_SYNCT` | **1**（默认，别动） | 时间戳同步。关了的话派的时间戳进不了飞控时基 |
 | `UXRCE_DDS_DOM_ID` | 0（默认） | DDS 域，和派上的 `ROS_DOMAIN_ID` 一致 |
 | `UXRCE_DDS_KEY` | 1（默认） | 多机时每机必须唯一 |
+
+**串口占用现状（飞控上四个 TELEM 口全被占满）**
+
+| 口 | PX4 设备 | 占用者 |
+| --- | --- | --- |
+| TELEM1 | `ttyS0` | `MAV_0_CONFIG=101` → QGC |
+| TELEM2 | `ttyS3` | `MAV_1_CONFIG=102` → **MTF-01 光流/测距** |
+| TELEM3 | `ttyS4` | **`UXRCE_DDS_CFG=TELEM3` → 树莓派（本方案）** |
+| TELEM4 | `ttyS7` | `MAV_2_CONFIG=104` → 板载蓝牙数传（UART8 硬件共用） |
 
 ### 11.2 EKF2 外部视觉（M3）
 
@@ -809,7 +822,7 @@ v1.17.0 的 `MulticopterLandDetector.cpp:202-203` 用的成员名是 **`_param_l
 **接线计划**（当前硬件状态：飞控和雷达都还没接）：
 
 ```
-飞控 TELEM2（UART4 / /dev/ttyS3）
+飞控 TELEM3（UART5 / /dev/ttyS4）★ 不是 TELEM2，TELEM2 已给 MTF-01 光流
    │  4 线：TX / RX / GND / 5V（★ 5V 只给转接板，不给派）
    ▼
 CH340 USB-TTL 转接板
@@ -872,8 +885,8 @@ CH340 USB-TTL 转接板
 **目标**：树莓派上 `ros2 topic list` 能看到 `/fmu/out/*`。
 
 **动作**
-1. **接线**：飞控 TELEM2 ↔ CH340 ↔ 派 USB。确认 `/dev/flight_controller` 出现。
-2. **飞控参数**：`UXRCE_DDS_CFG` = TELEM2；`MAV_1_CONFIG = 0`（★ 关键，否则抢串口）。
+1. **接线**：飞控 **TELEM3**（UART5 / `ttyS4`）↔ CH340 ↔ 派 USB。确认 `/dev/flight_controller` 出现。
+2. **飞控参数**：`UXRCE_DDS_CFG` = **TELEM3**；`SER_TEL3_BAUD` = **921600**（★ 最容易漏，静默失败）；**`MAV_1_CONFIG` 保持 `102` 不动**（那是 MTF-01 光流的通路，早前写的「置 0」已作废）。
 3. **派上装 Agent v2.4.3**（源码编译；snap 的 stable 版能连但建不了 topic，必须 `--edge`）：
    ```
    git clone -b v2.4.3 https://github.com/eProsima/Micro-XRCE-DDS-Agent.git
@@ -1041,7 +1054,7 @@ CH340 USB-TTL 转接板
 | R10 | 飞控 5V BEC 只有 3 A | 派供电不足、随机重启 | 派独立供电 |
 | R11 | 位姿过期仍继续发 | 飞控拿着旧位姿飞 | 位姿过期就**停止发布**，让飞控干脆失效 |
 | R12 | `map→odom` 跳变被喂给 EKF2 | 位置瞬间跳变 | 只用 `odom→base_link` |
-| R13 | 忘了 `MAV_1_CONFIG = 0` | XRCE 和 MAVLink 抢 TELEM2 | M1 参数清单里当必改项 |
+| R13 | **改飞控参数时误动了 `MAV_1_CONFIG` / `SER_TEL2_BAUD`** | 光流/测距静默失效，Position 与 offboard 全塌 | M1 参数清单只列 `UXRCE_DDS_CFG` / `SER_TEL3_BAUD` / `UXRCE_DDS_SYNCT` 三项；改完用 `uorb top` 确认 `distance_sensor` 仍 100 Hz |
 | R14 | 非实时系统上做实时活 | 抖动 → 姿态抖 | 纪律：派只发设定点（§4） |
 
 ---
@@ -1050,7 +1063,7 @@ CH340 USB-TTL 转接板
 
 | # | 待核实项 | 影响 | 状态 |
 | --- | --- | --- | --- |
-| Q1 | ~~`UXRCE_DDS_CFG` 的枚举值表与波特率设置位置~~ **✅ 已解决** | M1 全部 | **已解决**：枚举值不用记（QGC 按名称选 TELEM2）。波特率位置已定位——模块启动行 `-b p:${BAUD_PARAM}`，`${BAUD_PARAM}` 展开为 `SER_TEL2_BAUD`，**必须显式设 921600** |
+| Q1 | ~~`UXRCE_DDS_CFG` 的枚举值表与波特率设置位置~~ **✅ 已解决** | M1 全部 | **已解决**：枚举值不用记（QGC 按名称选）。波特率位置已定位——模块启动行 `-b p:${BAUD_PARAM}`，`${BAUD_PARAM}` 展开为所选串口的 `SER_TELn_BAUD`，**必须显式设 921600**。★ 2026-11 变更：串口从 TELEM2 改为 **TELEM3**（TELEM2 已给 MTF-01 光流），对应 `SER_TEL3_BAUD`；`SER_TEL3_BAUD` 可能要等 `UXRCE_DDS_CFG` 设好并重启后才出现 |
 | Q2 | ~~`COM_RC_OVERRIDE` 的完整位值表（Offboard 是第几位）~~ **✅ 已解决** | **安全关键** | **已解决**：`commander_params.c:432-446`，default **1**，min 0 max 3；`bit0`=auto 接管、**`bit1`=offboard 接管**。默认只开 bit0 ⇒ **必须改成 3**，否则 offboard 下推杆没反应 |
 | Q3 | ~~`COM_RCL_EXCEPT` 的位值表~~ **✅ 已解决** | 安全 | **已解决**：`commander_params.c:618-633`，default 0，min 0 max 31；`bit0 Mission / bit1 Hold / bit2 Offboard(=4) / bit3 External Mode / bit4 Altitude Cruise` |
 | Q4 | ~~`EKF2_HGT_REF` 在 v1.17.0 是否仍存在~~ **✅ 已解决**：仍在，`src/modules/ekf2/module.yaml:87-104`，enum `0 Barometric / 1 GPS / 2 Range sensor / 3 Vision`，**default 1(GPS)** | M3 | **已解决（有残留项）**：残留 = C++ 消费端（`EKF2.cpp` / `EKF/height_control.cpp`）未读，不能排除"YAML 定义了但代码已忽略" |

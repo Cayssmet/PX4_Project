@@ -142,13 +142,14 @@ QGC 的界面就三块，别被吓到：
 | 参数 | 值 | 为什么 |
 |---|---|---|
 | `SYS_AUTOSTART` | `4001` | 机架类型 = Generic Quad X |
-| `UXRCE_DDS_CFG` | TELEM2 | 派走 uXRCE-DDS |
-| `SER_TEL2_BAUD` | `921600` | ★ 不改就一个话题都收不到，且不报错 |
-| `MAV_1_CONFIG` | `0`(Disabled) | 释放 TELEM2 给 XRCE |
+| `UXRCE_DDS_CFG` | **TELEM3** | 派走 uXRCE-DDS（TELEM2 已给光流） |
+| `SER_TEL3_BAUD` | `921600` | ★ 不改就一个话题都收不到，且不报错 |
+| **`MAV_1_CONFIG`** | **`102`(TELEM2) 保持不动** | ★ 这是 MTF-01 光流的通路，**千万别置 0** |
+| `SER_TEL2_BAUD` | `115200` 保持不动 | MTF-01 固定 115200 |
 | `COM_RC_OVERRIDE` | `3` | ★ 不改的话进了 offboard 推杆夺不回控制权 |
-| `COM_OBL_RC_ACT` | `Position` | offboard 丢遥控时切定点 |
+| `COM_OBL_RC_ACT` | `Land`（=4） | offboard 丢遥控时室内无 GPS 选降落 |
 | `COM_OF_LOSS_T` | 默认 1.0 | offboard 断流多久退模式 |
-| `EKF2_HGT_REF` | `3`(Vision) | 无 GPS 必须改 |
+| `EKF2_HGT_REF` | `2`(Range sensor) | 本项目无 GPS、用 MTF-01 测距定高 |
 | `EKF2_EV_CTRL` | 按位 | 外部位姿融合开关，默认全关 |
 | `EKF2_EV_DELAY` | 实测值 | 视觉延迟 |
 | `RC_INPUT_PROTO` | `SBUS` 或 `Auto` | FS-iA10B 是 SBUS |
