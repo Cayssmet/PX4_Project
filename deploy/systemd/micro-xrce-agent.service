@@ -1,0 +1,38 @@
+[Unit]
+Description=Micro XRCE-DDS Agent (PX4 <-> ROS 2 bridge, TELEM3 @ 460800)
+Documentation=https://github.com/eProsima/Micro-XRCE-DDS-Agent
+# 飞控用 USB 接入，不依赖网络；保留这一行只是为了排序清晰
+After=network.target
+# ★ 关键：设备没插/飞控没上电时 Agent 会立刻退出。
+#   默认 systemd 在 10 秒内失败 5 次就放弃，这里设为 0 = 永不放弃，一直重试到插上为止。
+StartLimitIntervalSec=0
+
+[Service]
+Type=exec
+User=ljz
+Group=dialout
+WorkingDirectory=/home/ljz/Micro-XRCE-DDS-Agent/build
+Environment=LD_LIBRARY_PATH=/home/ljz/Micro-XRCE-DDS-Agent/build
+
+# ★ 单实例保险：启动前先清掉任何残留的 Agent 进程。
+#   开头的 "-" 表示这一行失败（比如根本没有残留进程）不算错误。
+#   ★★ 这一行是必须的：曾经因为同时跑两个 Agent，两个进程抢同一个串口、
+#   字节互相交错，"树莓派->飞控"方向的数据全毁，表现为飞控
+#   `uxrce_dds_client status` 里 `Payload rx: 0 B/s`，M2 命令永远收不到 ACK。
+ExecStartPre=-/usr/bin/pkill -x MicroXRCEAgent
+
+ExecStart=/home/ljz/Micro-XRCE-DDS-Agent/build/MicroXRCEAgent serial --dev /dev/flight_controller -b 460800
+
+# 崩了/串口掉了就自动重来
+Restart=always
+RestartSec=3
+# 停止时给 3 秒收尾再强杀整个 cgroup
+TimeoutStopSec=3
+KillMode=control-group
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=micro-xrce-agent
+
+[Install]
+WantedBy=multi-user.target
