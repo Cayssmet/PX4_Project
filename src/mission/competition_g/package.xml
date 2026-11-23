@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>competition_g</name>
+  <version>0.1.0</version>
+  <description>
+    2023 电赛 G 题《空地协同智能消防》任务层。
+    负责：蛇形巡逻航线生成、任务状态机（起飞/巡逻/发现火情/接近确认/投放/返航降落）、
+    火源坐标上报给小车。不直接产控制量，只发设定点给位置环。
+  </description>
+
+  <maintainer email="ljz@example.com">ljz</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>uav_interfaces</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

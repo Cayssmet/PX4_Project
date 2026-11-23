@@ -1,5 +1,60 @@
 # 版本变更记录
 
+## v3.0.0 - 按 2023 电赛 G 题《空地协同智能消防》重构
+
+**这是一次破坏性结构调整**：旧赛题（D 题 / 凌霄飞控 / 自定义串口 V2）整套工程退出构建，但**没有从 git 历史里删除**。
+
+### 归档（移入 `archive/legacy_2023_uav/`，不再参与 `colcon build`）
+
+- `flight_controller_bridge`（自定义串口 V2 协议 + 凌霄飞控）
+- `camera_serial_bridge`（旧树莓派 USB 摄像头串口桥）
+- `car_serial_bridge`（旧蓝牙串口小车桥）
+- `gcs_serial_bridge`（旧地面站蓝牙链路）
+- `waypoint_manager`（旧 D 题任务层）
+- `csm` + `ros2_laser_scan_matcher`（已确认死代码，会与 Cartographer 抢 `odom`）
+- `zips/` 下 5 个游离压缩包
+- `uav_bringup_launch/`：旧的 `full_system.launch.py`、`.orig` 与配套测试
+
+### 重新分组（**包名一律不变**，包内引用零改动）
+
+```
+src/
+  interfaces/    uav_interfaces
+  localization/  LSLIDAR_X_ROS2-20240228 / cartographer_config / map_coordinate_provider
+  perception/    k230_bridge        ← 新增骨架
+  control/       position_pid_controller
+  flight/        px4_offboard
+  mission/       competition_g      ← 新增骨架
+  comm/          car_link           ← 新增骨架
+  recorder/      flight_data_recorder
+  bringup/       uav_bringup
+```
+
+### 新增
+
+- `src/perception/k230_bridge`（v0.1.0 骨架）：K230 庐山派下视相机桥。红点检测与视觉导航**全部由队友在 K230 上实现**，本包只接结论与状态标志位，树莓派不处理图像。
+- `src/mission/competition_g`（v0.1.0 骨架）：G 题任务层。含蛇形航线规划结论（y = 4/12/20/28/36 dm，航程 272 dm）与任务状态机设计。
+- `src/comm/car_link`（v0.1.0 骨架）：树莓派开热点作 AP + TCP Server，ESP32-S3 小车作 Client；按赛题要求 1 Hz 上报场地坐标。
+- `src/bringup/uav_bringup/launch/competition_g.launch.py`：只拉起真实存在且已实测的节点（雷达 → Cartographer → 坐标 → PID → 记录），飞控/K230/任务/小车四处留注释占位。
+- `docs/赛题G_空地协同消防_解读与差距分析.md`：题目逐条解读、评分拆解、航线与时间预算、四个现场风险（安全网对雷达是否透明 / SLAM↔场地坐标标定 / 60° 遮光罩可见性 / 自由落体投放）、新旧资产对照、分工与待确认清单。
+- `src/README.md`：新目录结构、全链路图、三条铁律。
+
+### 改动
+
+- `uav_bringup` 升到 v2.0.0：`package.xml` 去掉全部已归档包依赖；`CMakeLists.txt` 移除指向旧 launch 的 pytest。
+- `VERSION` → `v3.0.0`；`VERSIONS.md` 增加 `v3.x` 版本线与留痕。
+
+### 保留（一行未改）
+
+`lslidar_driver`、`lslidar_msgs`、`cartographer_config`、`map_coordinate_provider`、`position_pid_controller`、`flight_data_recorder`、`uav_interfaces`、`px4_offboard`。
+
+### 为什么改传输层
+
+实测：uXRCE-DDS 在 115200 下飞控固定上行约 **35 KB/s**，而线路只有 11.5 KB/s，
+导致 `vehicle_attitude` 实测 1.2 Hz（应 100+）、`vehicle_local_position` 0.79 Hz（应 50）。
+改用 MAVLink 按需轮询后：**`LOCAL_POSITION_NED` 稳定 24.6 Hz，总流量 6.5 KB/s**。
+细节见赛题文档第六节。
+
 ## v2.0.0 - PX4 迁移脚手架
 
 **旧工程零改动**：`src/` 下原有 14 个包一行未改，只**新增**了一个包和一个脚本。这一版没有任何可执行节点，也没有接进 `full_system.launch.py`，所以对现有系统没有任何运行影响。

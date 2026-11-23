@@ -1,21 +1,27 @@
 # 无人机导航工作区版本清单
 
-当前工作区发布版本：**v2.0.0**（PX4 迁移脚手架：只有库与测试，尚未接入任何运行中的链路）
+当前工作区发布版本：**v3.0.0**（2023 电赛 G 题《空地协同智能消防》重构版：旧赛题工程整体归档，新架构骨架就位）
 
 > 想回到"还没碰 PX4"的状态：`git checkout v1.2.0`。想回到"还没有 v2 迁移代码"的状态：`git checkout v1.1`。
+> 想回到"还没按 G 题重构"的状态：`git checkout v2.0.0`。
 
 ## 自研功能包
 
 | 功能包 | 版本 | 说明 |
 | --- | --- | --- |
 | `uav_interfaces` | v1.0 | ROS 2 消息与接口定义 |
-| `flight_controller_bridge` | v1.0 | 飞控串口协议、状态反馈与控制桥接 |
 | `cartographer_config` | v1.0 | N10 雷达 Cartographer 配置 |
 | `map_coordinate_provider` | v1.0 | 地图坐标与姿态输出 |
-| `waypoint_manager` | v1.1 | D 题任务流程、横移、前追和视觉辅助阶段 |
 | `position_pid_controller` | v1.1 | 固定目标及视觉相对位移控制、偏航参数校准 |
-| `uav_bringup` | v1.1 | 全系统 launch 与开机自启入口 |
-| `px4_offboard` | v2.0.0 | PX4 offboard 迁移包：坐标系换算（ENU/FLU↔NED/FRD）、PX4 专用 QoS 助手、位姿上行与设定点下行。**v2.0.0 只含静态库与 gtest，没有可执行节点、没接进 launch** |
+| `uav_bringup` | v2.0.0 | 全系统 launch 与开机自启入口；v2.0.0 重写为 `competition_g.launch.py`，只拉起真实存在的节点 |
+| `px4_offboard` | v2.0.0 | PX4 飞控适配层：坐标系换算（ENU/FLU↔NED/FRD）、专用 QoS 助手、位姿上行与设定点下行。**v2.0.0 只含静态库与 gtest，节点待写** |
+| `k230_bridge` | v0.1.0 | **新增（骨架）**：K230 庐山派下视相机串口桥，只接红点结论与视觉导航标志位 |
+| `competition_g` | v0.1.0 | **新增（骨架）**：G 题任务层，蛇形航线 + 任务状态机 |
+| `car_link` | v0.1.0 | **新增（骨架）**：与 ESP32-S3 消防车的 WiFi TCP 链路 |
+
+> 已移入 `archive/legacy_2023_uav/` 的旧包：`flight_controller_bridge`、`camera_serial_bridge`、
+> `car_serial_bridge`、`gcs_serial_bridge`、`waypoint_manager`、`csm`、`ros2_laser_scan_matcher`。
+> 它们**不参与 `colcon build`**，但 git 历史完整保留。
 
 ## 第三方功能包
 
@@ -34,6 +40,7 @@
 - `v1.1`：针对 D 题流程及当前 PID 校准结果的版本。
 - `v1.2.0`：**迁移前冻结基线**。只增加文档（PX4 伴飞工程计划书、实战路线手册、M1 操作手册、旧桥迁移分析对账）与源码核实结论，`src/` **一行代码都没有改动**。任何时候想回到"还没碰 PX4"的状态，`git checkout v1.2.0` 即可。
 - `v2.0.0`：**PX4 迁移脚手架**。新增 `px4_offboard` 包（`frame_transforms` 坐标换算库 + `qos_profiles` + 12 组 gtest）与 `tools/setup_px4_msgs.sh`；`.gitignore` 排除 `src/px4_msgs/`。**没有节点、没有接进 `full_system.launch.py`，旧工程 `src/` 一行未改**，`flight_controller_bridge` 原样保留可回退。
+- `v3.0.0`：**按 2023 电赛 G 题重构**。旧赛题（D 题 / 凌霄飞控 / 自定义串口 V2）的 7 个包与 5 个游离 zip 整体移入 `archive/legacy_2023_uav/`，不再参与构建；`src/` 改为按层分组（`interfaces` / `localization` / `perception` / `control` / `flight` / `mission` / `comm` / `recorder` / `bringup`）；新增 3 个骨架包 `k230_bridge` / `competition_g` / `car_link`；`uav_bringup` 重写为 `competition_g.launch.py`；新增赛题解读文档。**所有保留包的包名不变**，因此包内引用零改动。
 - ROS 2 `package.xml` 和 CMake 使用三段式版本，例如 `1.1.0`；文档中简写为 `v1.1`。
 - 后续功能修改先更新对应包版本，再同步本文件和根目录 `VERSION`。
 
@@ -42,7 +49,8 @@
 | 版本线 | 含义 | 状态 |
 | --- | --- | --- |
 | `v1.x` | 凌霄飞控 + 自定义串口协议（V1/V2 线缆协议）时代 | **冻结**，只读不改，`v1.2.0` 为最终基线 |
-| `v2.x` | PX4 1.17 + uXRCE-DDS + offboard 迁移线 | 进行中 |
+| `v2.x` | PX4 1.17 + uXRCE-DDS + offboard 迁移线 | **冻结**，`v2.0.0` 为最终基线（uXRCE-DDS 因物理层带宽不足已放弃，改走 MAVLink） |
+| `v3.x` | 2023 电赛 G 题《空地协同智能消防》+ PX4 + MAVLink | **进行中** |
 
 `v2.x` 的编号约定：**每个里程碑（M1 链路 / M2 命令 / M3 位姿上行 / M4 offboard 最小闭环 / M5 定点悬停 / M6 任务接入）发一个次版本号**，脚手架与破坏性结构调整走主版本号。每版都要：① 在 `CHANGELOG.md` 写清改了什么；② 同步本文件；③ 打一个 git tag（`git tag -a v2.0.0 -m "..."`）并 push。
 
@@ -52,3 +60,4 @@
 | --- | --- | --- |
 | `v1.2.0` | 迁移前冻结基线（纯文档） | `v1.2.0` |
 | `v2.0.0` | PX4 迁移脚手架：`px4_offboard` 包（坐标系换算库 + QoS 助手 + gtest 交叉校验 + `px4_msgs` 拉取脚本），**尚未接入任何运行中的链路** | `v2.0.0` |
+| `v3.0.0` | **按 G 题重构**：旧赛题 7 包 + 5 zip 归档；`src/` 按层分组；新增 `k230_bridge` / `competition_g` / `car_link` 骨架；`uav_bringup` 换成 `competition_g.launch.py`；新增 `docs/赛题G_空地协同消防_解读与差距分析.md` | `v3.0.0` |
