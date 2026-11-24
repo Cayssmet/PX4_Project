@@ -1,5 +1,67 @@
 # 版本变更记录
 
+## v3.1.0 - 飞控链路改走 MAVLink：`px4_offboard` 换成 Python，只读节点可运行
+
+uXRCE-DDS 那条路走到头了。实测飞控固定向外灌 27 条话题、约 **35 KB/s**，
+而 CH340 这条线在 115200 上物理上限只有 **11.5 KB/s**，460800 更是**一条数据都收不到**
+（换波特率不解决，因为发送量由固件决定、我们改不了）。
+改 MAVLink 后按需点名，**6.5 KB/s 就拿到 25 Hz 位置**，115200 只用了 57%。
+
+### 传输层的三个硬结论（都是真机实测）
+
+- **`SET_MESSAGE_INTERVAL(244)` 在 PX4 1.17 上回 `UNSUPPORTED`**（命令似乎没进 mavlink
+  接收机那个分支；源码里该分支失败只会返回 `FAILED`，不可能是 `UNSUPPORTED`）。
+  而 **`REQUEST_MESSAGE(512)` 回 `ACCEPTED` 且每次都能拉出一条** ⇒ 用「定时点名」
+  代替「设置流频率」，频率完全由我们自己控。
+- **实测点名频率**：`LOCAL_POSITION_NED` 目标 25 Hz → 实到 **24.60 Hz**；
+  `ESTIMATOR_STATUS` 2.00、`EXTENDED_SYS_STATE` 2.07、`HEARTBEAT` 2.13。
+  总流量 **下行 4236 B/s + 上行 2383 B/s**。
+- ★ **MAVLink 路线上没有 `OffboardControlMode`**：设定点流本身就是心跳。
+  `SET_POSITION_TARGET_LOCAL_NED` 以 ≥2 Hz 持续发才算 offboard 存活，
+  停发超过 `COM_OF_LOSS_T`（默认 1 s）就退出。写上行时别去找 `OffboardControlMode`。
+
+### `px4_offboard` 从 ament_cmake 改为 ament_python
+
+理由：这台机器**没有 C++ 工具链**（`g++`/`cmake` 全无），那 12 个 gtest 从来没跑过；
+而 Python 版的两套测试是**实跑通过**的。而且一份实现比两份好 —— C++ 换算库和
+Python 节点各存一份数学，迟早漂移。
+
+- **`mavlink_codec.py`** —— 零依赖 MAVLink v1 编解码（只用标准库）。
+  树莓派上没有 `pip3`、PyPI 也不一定连得上，而这里只需要十几条消息，
+  手工组帧的字节已用 pymavlink 参考帧**逐字节核对**。
+- **`frames.py`** —— ENU/FLU ↔ NED/FRD 换算，纯标准库、不依赖 ROS。
+- **`px4_node.py`** —— **只读**节点：定时点名 32/30/245/230 → 整理成 `/flight/status`。
+  **不发任何控制量**，可以在装桨、通电的飞机上放心跑。串口读写放独立线程，
+  掉线自动重连。
+- **`config/px4_offboard.yaml`** + **`launch/px4_offboard.launch.py`** —— 串口设备名与
+  波特率都是参数；`baud` **必须等于飞控 `SER_TEL3_BAUD`**，不一致时一个字节都收不到且不报错。
+- **C++ 骨架移入 `archive/legacy_v2_cpp_frame_transforms/`**（含 `frame_transforms.*`、
+  `qos_profiles.hpp`、12 组 gtest、原 `CMakeLists.txt`），附 README 说明为什么归档
+  以及怎么取回。**没有删任何东西**。
+
+### 测试（本机实跑，不依赖 ROS）
+
+```
+test/test_mavlink_codec.py    18/18 通过
+test/test_frames.py           16/16 通过
+```
+
+`test_mavlink_codec.py` 里有三个 **GOLDEN 参考帧**（pymavlink 生成、已被 PX4 接受，
+分别是 `HEARTBEAT`、`COMMAND_LONG(244)`、`PARAM_REQUEST_READ`），组帧必须逐字节相等。
+还包括：v2 帧头 10 字节、坏 CRC 丢弃后仍能继续解析、3 字节分片、垃圾前缀重同步、
+`PARAM_VALUE` 整数还原（`SYS_AUTOSTART` 4001）。
+
+`test_frames.py` 里最关键的是 `test_body_vector_world_consistency`：
+把机体速度先转 FRD 再按姿态转到世界，必须等于「先按地图姿态转到世界再按世界法则转换」。
+**两条法则若不是同源，这条必挂** —— 这是「前后左右整体转 90°」那类炸机的守门员。
+
+### 顺带记下的两个协议坑
+
+- **v2 帧头是 10 字节**（带签名再 +13）。写成 12 会让载荷整体错位 2 字节，
+  表现是「所有参数都读成 0」。
+- **PX4 把整数参数的位模式当 float 传**，`PARAM_VALUE` 要按 `param_type` 还原，
+  否则 `SYS_AUTOSTART=4001` 读出来是 `0.0000`。
+
 ## v3.0.1 - 通信协议落实：高度下发、两个联调工具、双 CH340 的坑
 
 协议 v1 里三个悬而未决的问题已由实测/确认关闭，并补上两个可直接跑的联调工具。

@@ -32,7 +32,7 @@
 | 定位 | `localization/` | `map_coordinate_provider` | TF → `/map/current_pose` |
 | 感知 | `perception/` | `k230_bridge` | **待写**：K230 串口桥（红点结果 + 视觉导航标志位） |
 | 控制 | `control/` | `position_pid_controller` | 位置环，出 `/pid/cmd_vel`（map 系速度） |
-| 飞控 | `flight/` | `px4_offboard` | 飞控适配：坐标换算 + MAVLink 收发（节点待写） |
+| 飞控 | `flight/` | `px4_offboard` | 飞控适配：`mavlink_codec`（零依赖编解码）+ `frames`（坐标换算）+ `px4_node`（**只读**，点名拉状态 → `/flight/status`） |
 | 任务 | `mission/` | `competition_g` | **待写**：蛇形航线 + 任务状态机 |
 | 通信 | `comm/` | `car_link` | **待写**：热点 + TCP，与 ESP32-S3 小车通信 |
 | 记录 | `recorder/` | `flight_data_recorder` | 飞行数据落盘 |

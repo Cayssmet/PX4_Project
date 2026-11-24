@@ -1,86 +1,119 @@
-# px4_offboard
+# px4_offboard —— 树莓派 ↔ PX4 的 MAVLink 桥
 
-PX4 1.17 + uXRCE-DDS 的伴飞适配层。它**取代** `flight_controller_bridge` 在系统中的位置：
-对上层（PID、任务状态机、建图链）保持 `/flight/command`、`/flight/status` 等话题接口不变，
-只把下层从"凌霄飞控自定义串口协议"换成"uXRCE-DDS + PX4 offboard"。
+这个包负责一件事：**让树莓派和 PX4 飞控说话**。
 
-> 设计依据见 `docs/PX4伴飞工程计划书.md`（尤其 §5–§9 的坐标系与链路设计、§10 的目录规划）。
-> 施工顺序见 `docs/M1_操作手册_派能读飞控.md`。
+它不含任何 uXRCE-DDS 代码 —— 那条路线在 v3.0.0 阶段实测过，
+飞控固定向外灌 27 条话题、约 35 KB/s，而 CH340 这条线在 115200 只有
+11.5 KB/s、460800 直接收不到数据，线路被撑爆。所以改走 MAVLink。
 
-## 版本状态
+## 三个模块
 
-| 版本 | 内容 | 能否上机 |
-| --- | --- | --- |
-| **v2.0.0（当前）** | 只有 `frame_transforms`（纯数学坐标换算库）+ `qos_profiles`（PX4 专用 QoS 助手）+ 单元测试。**没有节点、不接任何运行中的链路。** | 只跑 `colcon test`，不涉及飞行 |
-| 下一版 | `px4_pose_uplink_node`：把 `/map/current_pose` 转成 `/fmu/in/vehicle_visual_odometry`（对应里程碑 **M3**，室内 offboard 的前置条件） | 手持验证 |
-| 再下一版 | `px4_offboard_bridge_node`：先只做"订阅 `/fmu/out/*` 填 `/flight/status`"（只读，零风险），再加 `vehicle_command`（M2），最后加 offboard 三件套（M4） | 拆桨 / 系留 |
+| 模块 | 依赖 | 作用 |
+|---|---|---|
+| `mavlink_codec.py` | **纯标准库** | MAVLink v1 组帧/解析（只实现用到的十几条消息） |
+| `frames.py` | **纯标准库** | ENU/FLU ↔ NED/FRD 的坐标与姿态换算 |
+| `px4_node.py` | rclpy + pyserial | 节点：定时点名拉状态 → 发 `/flight/status` |
 
-## 为什么坐标换算要单独做成一个库
+前两个不 import ROS，可以脱离一切环境单独测试 —— 这是故意的，
+因为坐标换算是这类项目炸机原因第一名，必须能在任何机器上随时验。
 
-**坐标系换算是本项目炸机风险第一名。** 前后左右全反、或者姿态和速度用了两套不同源的
-换算，在地面上完全看不出来，一起飞就往错误方向冲。
+## 为什么不用 pymavlink
 
-所以这里刻意：
+树莓派上没有 `pip3`，PyPI 也不一定连得上。而这里只需要十几条消息，
+手工组帧的字节已经用 `pymavlink` 生成的参考帧**逐字节核对过**
+（见 `test/test_mavlink_codec.py` 里三个 `GOLDEN_*` 常量）。
+少一个依赖，就少一类「昨天还能跑今天跑不起来」。
 
-- 不依赖 ROS、不依赖 Eigen（只需要 `<cmath>`），可以脱离 ROS 环境编译和测试；
-- 单元测试里放了一条 `BodyVectorWorldConsistency`：它验证"姿态换算法则"和"机体矢量换算法则"
-  **互相自洽**。单看任何一条都可能通过，两条不同源才会让飞机反向。
-- 生产代码里**绝不用闭式**，一律用两次显式 Hamilton 四元数乘法，与 PX4 官方
-  `px4_ros_com/src/lib/frame_transforms.cpp` 逐字一致；闭式只在测试里做交叉校验。
+## 现在能做什么（第一阶段：只读）
 
-### 三条换算法则（互相不一样，混淆就出事）
-
-| 对象 | ROS 侧 | PX4 侧 | 法则 |
-| --- | --- | --- | --- |
-| 世界系位置 / 速度 | ENU | NED | `(x, y, z) -> (y, x, -z)`（**自逆**） |
-| 机体矢量 | FLU | FRD | `(x, y, z) -> (x, -y, -z)`（**自逆**，注意**不换位**） |
-| 姿态 | ENU/FLU | NED/FRD | `q_px4 = NED_ENU_Q ⊗ q_enu ⊗ AIRCRAFT_BASELINK_Q` |
-| 偏航角 | ENU | NED | `yaw_px4 = pi/2 - yaw_map`（**是反射，不是常数偏移**） |
-| 偏航角速度 | ENU | NED | `yaw_rate_px4 = -yaw_rate_map`（纯变号） |
-
-其中 `NED_ENU_Q = (0, √2/2, √2/2, 0)`、`AIRCRAFT_BASELINK_Q = (0, 1, 0, 0)`。
-
-**偏航为什么不是加一个常数**：ENU 的 z 朝上、NED 的 z 朝下，两边绕 z 的正方向相反。
-`yaw_map = 0` 对应 `yaw_px4 = 90°`，而 `yaw_map = -90°` 对应 `yaw_px4 = 180°`——
-差值符号已经反过来了，所以不存在能对所有航向都成立的常数 offset。
-
-## 为什么 QoS 要单独做成一个头文件
-
-PX4 的 QoS **不是 ROS 2 默认值**。ROS 2 默认 `KEEP_LAST(10) + RELIABLE + VOLATILE`，
-PX4 用的是：
-
-| 方向 | 话题 | PX4 侧角色 | durability | reliability |
-| --- | --- | --- | --- | --- |
-| 飞控 → 派 | `/fmu/out/*` | 发布者 | `TRANSIENT_LOCAL` | `BEST_EFFORT` |
-| 派 → 飞控 | `/fmu/in/*` | 订阅者 | `VOLATILE` | `BEST_EFFORT` |
-
-不匹配时**不报错**，只表现为"一个话题都收不到 / 发不进去"，极易被误判成 Agent 或串口故障。
-因此所有跟 PX4 有关的话题都必须走 `px4_subscription_qos()` / `px4_publication_qos()`。
-
-## 编译与测试
+`px4_node` **只读**，不发任何控制量，可以放心在装桨、通电的飞机上跑。
 
 ```bash
-# 1) 先准备 px4_msgs（当前 v2.0.0 还用不到，但下一版就需要）
-bash tools/setup_px4_msgs.sh
+# 1) 先让出串口（DDS 时代的服务会占着它）
+sudo systemctl stop micro-xrce-agent
 
-# 2) 编译
-cd ~/ros2_ws
-colcon build --symlink-install --packages-select px4_offboard
+# 2) 起节点
+ros2 launch px4_offboard px4_offboard.launch.py
 
-# 3) 跑坐标系单元测试（这一步必须先通过，再谈任何飞行）
-colcon test --packages-select px4_offboard --event-handlers console_direct+
-colcon test-result --verbose
+# 3) 另开一个终端看结果
+ros2 topic echo /flight/status
 ```
 
-v2.0.0 只有纯数学库，**不装 px4_msgs 也能单独编译和测试**。
+看到 `communication_ok: true`、`armed` / `current_mode` / `current_height`
+跟着飞机状态变，就说明链路通了。
 
-## 无 ROS 环境下的交叉校验
+## 关键设计（写上行之前务必读）
 
-如果手边没有 ROS 2 环境（例如在 Windows 上），可以用 Python 版脚本做同一套随机位姿校验：
+### 1. MAVLink 上没有 `OffboardControlMode`
+
+DDS 路线上要另发 `OffboardControlMode` 当心跳。**MAVLink 路线上设定点流本身就是心跳**：
+`SET_POSITION_TARGET_LOCAL_NED` 以 **≥2 Hz** 持续发，PX4 才认为外部控制在线；
+停发超过 `COM_OF_LOSS_T`（默认 1 s）就退出 offboard。
+
+### 2. 流频率用 `REQUEST_MESSAGE(512)` 点名，不要用 `SET_MESSAGE_INTERVAL(244)`
+
+实测：`244` 在 PX4 1.17 上回 `UNSUPPORTED`（命令似乎没进 mavlink 接收机那个分支），
+而 `512` 回 `ACCEPTED` 且**每次都能拉出一条**。所以频率完全由我们自己控：
+
+| 消息 | 频率 | 说明 |
+|---|---|---|
+| `LOCAL_POSITION_NED`(32) | 25 Hz | 位置/速度，`z` 向下为正，**高度 = -z** |
+| `ATTITUDE`(30) | 10 Hz | 姿态 |
+| `EXTENDED_SYS_STATE`(245) | 2 Hz | `landed_state`（落地/空中） |
+| `ESTIMATOR_STATUS`(230) | 2 Hz | 位置估计质量 |
+
+实测这条组合的总流量 **6.5 KB/s**（下行 4.2 + 上行 2.4），115200 用了 57%。
+
+### 3. 两个反复踩过的协议坑
+
+* **v2 帧头是 10 字节**（带签名再 +13）。写成 12 会让载荷整体错位 2 字节，
+  表现是「所有参数都读成 0」。
+* **PX4 把整数参数的位模式当 float 传**。`PARAM_VALUE` 要按 `param_type` 还原，
+  否则 `SYS_AUTOSTART=4001` 读出来是 `0.0000`。
+
+### 4. 坐标系四条法则
+
+```
+世界系位置/速度： (x, y, z)_ENU -> (y, x, -z)_NED     ← 换 x/y + z 取反
+世界系姿态：     q_ned_frd = NED_ENU_Q ⊗ q_enu_flu ⊗ AIRCRAFT_BASELINK_Q
+机体系矢量：     (x, y, z)_FLU -> (x, -y, -z)_FRD     ← 不换位，只 y/z 取反
+偏航：           yaw_ned = π/2 - yaw_enu
+```
+
+⚠ 第 1 条和第 3 条**法则不一样**。把世界系的「换 x/y」套到机体速度上，
+前后左右会整体转 90°。`test_frames.py::test_body_vector_world_consistency`
+就是专门盯这条不变式的。
+
+⚠ 偏航是**反射**不是常量偏移（两边 z 轴正方向相反），所以不存在能对全部
+航向成立的常数 offset。全工程只允许 `frames.py` 这一处做换算。
+
+## 自检
+
+不需要 ROS、不需要 pytest：
 
 ```bash
-python3 tools/verify_frames.py
+python3 test/test_mavlink_codec.py     # 18 项：含 3 个与 pymavlink 逐字节一致的参考帧
+python3 test/test_frames.py            # 16 项：含 2 万组随机位姿的不变式
 ```
 
-它和 `test/test_frame_transforms.cpp` 用的是同一套算法与随机位姿生成方式，
-两边结果应当一致。改动 `frame_transforms.cpp` 后建议两边都跑一遍。
+装了 pytest 也可以 `colcon test --packages-select px4_offboard`。
+
+## 串口设备名
+
+飞控是 CH340（`1a86:7523`），**没有唯一序列号**，只能靠插在哪个 USB 口区分。
+`K230` 之后也要走 CH340，两个设备抢同一套 VID/PID —— 详见
+`docs/通信协议设计_v1.md` §9「两个 CH340 的坑」。
+
+```bash
+ls -l /dev/flight_controller        # udev 固定名
+udevadm info -q property -n /dev/ttyUSB0 | grep -E 'ID_PATH|ID_SERIAL'
+```
+
+## 下一步
+
+第二阶段（尚未实现）才做上行：
+
+1. `/map/current_pose` → `VISION_POSITION_ESTIMATE(102)` 30–50 Hz
+2. `/pid/cmd_vel` → `SET_POSITION_TARGET_LOCAL_NED(84)` 10–20 Hz
+3. `/flight/command` → `COMMAND_LONG(76)`（解锁 / 切模式 / 起降）
+4. 先只读跑通验收，再一条条开上行

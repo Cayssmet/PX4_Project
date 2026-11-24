@@ -1,0 +1,27 @@
+# px4_offboard 参数
+#
+# 改完不用重启飞控；但要让参数生效必须重新启动节点（或 launch）。
+# 波特率必须与飞控 SER_TEL3_BAUD 一致，否则一个字节都收不到且**不报错**。
+
+px4_node:
+  ros__parameters:
+    # ---- 串口 ----
+    serial_device: "/dev/flight_controller"   # udev 固定名；飞控是 CH340
+    baud: 115200                              # ★ 必须等于 SER_TEL3_BAUD
+
+    # ---- 下行轮询频率（Hz；填 0 表示不点名）----
+    # 实测 25 Hz 位置 + 6.5 KB/s 总流量，115200 够用。
+    local_position_ned_hz: 25.0
+    attitude_hz: 10.0
+    extended_sys_state_hz: 2.0
+    estimator_status_hz: 2.0
+
+    # ---- 上行 / 发布 ----
+    heartbeat_hz: 2.0            # 给飞控的 GCS 心跳
+    status_publish_hz: 10.0      # /flight/status 的发布频率
+
+    # ---- 判定 ----
+    stale_timeout_ms: 500.0      # 超过这么久没收到就算「通信中断」
+    reconnect_interval_ms: 2000  # 串口打不开时的重试间隔
+
+    print_status: true           # 打印 ACK 与飞控 STATUSTEXT
