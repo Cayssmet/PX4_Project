@@ -1,5 +1,36 @@
 # 版本变更记录
 
+## v3.0.1 - 通信协议落实：高度下发、两个联调工具、双 CH340 的坑
+
+协议 v1 里三个悬而未决的问题已由实测/确认关闭，并补上两个可直接跑的联调工具。
+
+### 协议增补（`docs/通信协议设计_v1.md`）
+
+- **新增链路 A 的 `0x03 CMD_SET_HEIGHT`（Pi → K230，10 Hz）**：K230 把像素偏差换成地面 cm
+  要乘以高度，以前飞控不报高度只能用固定值，现在由 Pi 把 EKF 的 `dist_bottom`（优先）或
+  `LOCAL_POSITION_NED.z` 推下去。高度失效时发 `valid=0`，K230 退回固定值并置 `HEIGHT_FIXED`。
+- **`VISION_STATE.flags` 扩到 bit6**：新增 `HEIGHT_FIXED`(bit5)、`OVER_RATE`(bit6) 两个降级位。
+- **K230 接入改成两阶段**：现在 GPIO UART `/dev/ttyAMA0`，之后改 CH340 USB `/dev/k230`；
+  设备名必须是 launch 参数，换线不改代码。
+- **新增 §9「两个 CH340 的坑」**：飞控与 K230 都是 `1a86:7523` 且都无序列号，只能靠
+  `ENV{ID_PATH}` 区分；插反不报错、只会让两个软链互换。附 udev 模板、三条操作纪律与自检办法。
+- Q1–Q4 状态改为「已定」，Q3（K230 能否稳 30 Hz）标注为**未实测**，给了实测判据。
+
+### 工具（`tools/`）
+
+- **新增 `tools/k230_rate_probe.py`**：解析 `VISION_STATE` 统计真实帧率、帧间隔中位数/p95/最大与
+  首几帧解码，按「平均 ≥20 Hz 且 p95 <80 ms」给结论。顺带能识别「这个口上是 MAVLink 帧」，
+  用来判断两条 CH340 有没有插反。
+- **新增 `tools/car_link_sim.py`**：假消防车 TCP Client。解码全部下行帧，并**自己按收到的位置点
+  独立累加航程**，与 Pi 发的 `MILEAGE` 对比 —— 直接验证赛题要求的「车上显示累计航程」两边一致。
+- **`tools/proto_selftest.py` 扩到 33 项**：补 `CMD_SET_HEIGHT`、`MILEAGE`、`MISSION_STATE`
+  编解码与 `HEIGHT_FIXED`/`OVER_RATE` 两个标志位，全部通过（CRC 向量仍为 `0x2E0E`）。
+
+### 文档
+
+- `src/perception/k230_bridge/README.md`、`src/comm/car_link/README.md` 由「格式待定」
+  改为指向已定稿协议 + 帧表 + 联调命令。
+
 ## v3.0.0 - 按 2023 电赛 G 题《空地协同智能消防》重构
 
 **这是一次破坏性结构调整**：旧赛题（D 题 / 凌霄飞控 / 自定义串口 V2）整套工程退出构建，但**没有从 git 历史里删除**。

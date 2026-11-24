@@ -113,6 +113,7 @@ class StreamParser:
 A_HEARTBEAT = 0x00
 A_CMD_MODE = 0x01
 A_CMD_SET_ROI = 0x02
+A_CMD_SET_HEIGHT = 0x03
 
 A_VISION_STATE = 0x81
 A_EVENT = 0x82
@@ -125,8 +126,15 @@ FLAG_LOST = 1 << 1
 FLAG_READY_DROP = 1 << 2
 FLAG_LOW_LIGHT = 1 << 3
 FLAG_SATURATED = 1 << 4
+FLAG_HEIGHT_FIXED = 1 << 5   # K230 在用参数里的固定高度，cm 缩放可能不准
+FLAG_OVER_RATE = 1 << 6      # 实际帧率低于目标 30 Hz
+
+# CMD_SET_HEIGHT 的 valid 位
+HEIGHT_VALID = 1 << 0        # 高度可信
+HEIGHT_FROM_RANGE = 1 << 1   # 用的是测距（而不是气压/推算）
 
 _VISION_STATE_FMT = "<BBHHhhhHHI"  # 20 字节
+_CMD_SET_HEIGHT_FMT = "<hBB"       # 4 字节
 
 
 def encode_vision_state(found, mode, px, py, off_x_cm, off_y_cm,
@@ -144,16 +152,37 @@ def decode_vision_state(payload: bytes) -> dict:
     return {
         "found": bool(found), "mode": mode, "px": px, "py": py,
         "off_x_cm": off_x_cm, "off_y_cm": off_y_cm, "height_cm": height_cm,
+        "flags": flags,
         "aligned": bool(flags & FLAG_ALIGNED), "lost": bool(flags & FLAG_LOST),
         "ready_drop": bool(flags & FLAG_READY_DROP),
         "low_light": bool(flags & FLAG_LOW_LIGHT),
         "saturated": bool(flags & FLAG_SATURATED),
+        "height_fixed": bool(flags & FLAG_HEIGHT_FIXED),
+        "over_rate": bool(flags & FLAG_OVER_RATE),
         "quality": quality, "ts_ms": ts_ms,
     }
 
 
 def encode_cmd_mode(mode: int) -> bytes:
     return build_frame(A_CMD_MODE, struct.pack("<B", mode))
+
+
+def decode_cmd_mode(payload: bytes) -> dict:
+    (mode,) = struct.unpack("<B", payload)
+    return {"mode": mode}
+
+
+def encode_cmd_set_height(height_cm: int, valid: int = HEIGHT_VALID) -> bytes:
+    return build_frame(A_CMD_SET_HEIGHT,
+                       struct.pack(_CMD_SET_HEIGHT_FMT, height_cm, valid, 0))
+
+
+def decode_cmd_set_height(payload: bytes) -> dict:
+    height_cm, valid, _res = struct.unpack(_CMD_SET_HEIGHT_FMT, payload)
+    return {"height_cm": height_cm, "valid": valid,
+            "height_valid": bool(valid & HEIGHT_VALID),
+            "from_range": bool(valid & HEIGHT_FROM_RANGE)}
+
 
 
 # --------------------------------------------------------------------------
@@ -197,6 +226,39 @@ def encode_fire_report(fire_id, x_cm, y_cm, ts_ms) -> bytes:
 def decode_fire_report(payload: bytes) -> dict:
     fire_id, _res, x, y, ts = struct.unpack("<BBhhI", payload)
     return {"fire_id": fire_id, "x_cm": x, "y_cm": y, "ts_ms": ts}
+
+
+# 累计航程：单位 cm（int32 够装 21 km，场地只有 480cm 量级）
+def encode_mileage(total_cm, delta_cm, ts_ms) -> bytes:
+    return build_frame(B_MILEAGE, struct.pack("<iiI", total_cm, delta_cm, ts_ms))
+
+
+def decode_mileage(payload: bytes) -> dict:
+    total, delta, ts = struct.unpack("<iiI", payload)
+    return {"total_cm": total, "delta_cm": delta, "ts_ms": ts}
+
+
+# 任务状态
+MS_IDLE, MS_TAKEOFF, MS_PATROL, MS_APPROACH = 0, 1, 2, 3
+MS_ALIGN, MS_DROP, MS_RETURN, MS_LAND, MS_DONE, MS_ABORT = 4, 5, 6, 7, 8, 9
+
+MISSION_STATE_NAMES = {
+    MS_IDLE: "IDLE", MS_TAKEOFF: "TAKEOFF", MS_PATROL: "PATROL",
+    MS_APPROACH: "APPROACH", MS_ALIGN: "ALIGN", MS_DROP: "DROP",
+    MS_RETURN: "RETURN", MS_LAND: "LAND", MS_DONE: "DONE", MS_ABORT: "ABORT",
+}
+
+
+def encode_mission_state(state, fire_count, ts_ms) -> bytes:
+    return build_frame(B_MISSION_STATE, struct.pack("<BBI", state, fire_count, ts_ms))
+
+
+def decode_mission_state(payload: bytes) -> dict:
+    state, fire_count, ts = struct.unpack("<BBI", payload)
+    return {"state": state,
+            "state_name": MISSION_STATE_NAMES.get(state, f"?{state}"),
+            "fire_count": fire_count, "ts_ms": ts}
+
 
 
 def encode_car_status(x_cm, y_cm, heading_d10, state, battery_pct) -> bytes:
@@ -302,6 +364,52 @@ def main() -> int:
     p6 = StreamParser()
     msgs = p6.feed(b"\x11\x22\x33" + encode_cmd_mode(MODE_SEARCH))
     check("垃圾前缀后能重新同步", len(msgs) == 1)
+
+    print()
+    print("=" * 70)
+    print("v1.0 之后新增的消息")
+    print("=" * 70)
+
+    # CMD_SET_HEIGHT（链路 A）
+    frame = encode_cmd_set_height(180, HEIGHT_VALID | HEIGHT_FROM_RANGE)
+    p7 = StreamParser()
+    msgs = p7.feed(frame)
+    check("SET_HEIGHT 解析出 1 条", len(msgs) == 1 and msgs[0][0] == A_CMD_SET_HEIGHT)
+    if msgs:
+        d = decode_cmd_set_height(msgs[0][1])
+        check("SET_HEIGHT 高度", d["height_cm"] == 180, str(d["height_cm"]))
+        check("SET_HEIGHT 有效位", d["height_valid"] is True)
+        check("SET_HEIGHT 来自测距", d["from_range"] is True)
+
+    # 高度失效时只发 valid=0
+    d = decode_cmd_set_height(encode_cmd_set_height(0, 0)[6:-2])
+    check("SET_HEIGHT valid=0 时 height_valid 为假", d["height_valid"] is False)
+
+    # VISION_STATE 的两个降级位
+    d = decode_vision_state(
+        encode_vision_state(1, MODE_ALIGN, 10, 20, 5, -5, 180,
+                            FLAG_ALIGNED | FLAG_HEIGHT_FIXED | FLAG_OVER_RATE,
+                            500, 7)[6:-2])
+    check("flags bit5 HEIGHT_FIXED", d["height_fixed"] is True)
+    check("flags bit6 OVER_RATE", d["over_rate"] is True)
+    check("降级位不影响 ALIGNED", d["aligned"] is True)
+
+    # MILEAGE（链路 B）
+    msgs = StreamParser().feed(encode_mileage(2720, -3, 424242))
+    check("MILEAGE 解析出 1 条", len(msgs) == 1 and msgs[0][0] == B_MILEAGE)
+    if msgs:
+        d = decode_mileage(msgs[0][1])
+        check("MILEAGE 总值/增量", (d["total_cm"], d["delta_cm"]) == (2720, -3),
+              f"got {d}")
+        check("MILEAGE 时间戳", d["ts_ms"] == 424242)
+
+    # MISSION_STATE（链路 B）
+    msgs = StreamParser().feed(encode_mission_state(MS_DROP, 2, 11))
+    check("MISSION_STATE 解析出 1 条", len(msgs) == 1 and msgs[0][0] == B_MISSION_STATE)
+    if msgs:
+        d = decode_mission_state(msgs[0][1])
+        check("MISSION_STATE 名称", d["state_name"] == "DROP", d["state_name"])
+        check("MISSION_STATE 火情计数", d["fire_count"] == 2)
 
     # 越界值
     try:
