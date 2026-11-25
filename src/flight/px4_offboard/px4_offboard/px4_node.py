@@ -26,6 +26,8 @@ rclpy 的默认定时器不适合「阻塞读串口」，所以串口读写放�
 from __future__ import annotations
 
 import math
+import os
+import sys
 import threading
 import time
 
@@ -134,6 +136,7 @@ class Px4Node(Node):
         next_hb = 0.0
         ser = None
         warned = False
+        read_errors = 0
 
         while rclpy.ok():
             # ---- 连接（掉线自动重连）----
@@ -168,18 +171,9 @@ class Px4Node(Node):
                         # 防止一次循环里补发一堆：若落后超过 3 个周期就重新对齐
                         next_due[msgid] = now + interval if next_due[msgid] + 3 * interval < now \
                             else next_due[msgid] + interval
-
-                # ---- 接收 ----
-                chunk = ser.read(4096)
-                if chunk:
-                    with self._lock:
-                        self._bytes_in += len(chunk)
-                    for msgid, payload, crc_ok in parser.feed(chunk):
-                        if crc_ok is False:
-                            continue
-                        self._dispatch(msgid, payload)
             except Exception as exc:  # noqa: BLE001
-                self.get_logger().warn(f"串口异常，重连：{exc}")
+                # 写失败才是真掉线
+                self.get_logger().warn(f"串口写失败，重连：{exc}")
                 try:
                     ser.close()
                 except Exception:  # noqa: BLE001
@@ -187,6 +181,47 @@ class Px4Node(Node):
                 ser = None
                 with self._lock:
                     self._serial_ok = False
+                time.sleep(self._reconnect_s)
+                continue
+
+            # ---- 接收 ----
+            # ★ pyserial 在「select 说可读但 read 返回 0 字节」时抛
+            # SerialException("device reports readiness to read but returned no data ...")。
+            # 这在 CH340 + Linux 上偶发，**不是掉线**；早期版本一见异常就 close/reopen，
+            # 结果每秒重连几十次、每次丢帧，状态永远判不新鲜。现在按瞬时错误处理：
+            # 少量连续出现只睡一下继续读，连续 25 次以上才认定真掉线。
+            try:
+                chunk = ser.read(4096)
+                read_errors = 0
+            except Exception as exc:  # noqa: BLE001
+                read_errors += 1
+                msg = str(exc)
+                transient = ("returned no data" in msg) or ("device disconnected" in msg)
+                if transient and read_errors < 25:
+                    if read_errors == 1:
+                        self.get_logger().debug(f"串口空读（瞬时，忽略）：{exc}")
+                    time.sleep(0.004)
+                    continue
+                self.get_logger().warn(
+                    f"串口连续读失败 {read_errors} 次，重连：{exc}")
+                try:
+                    ser.close()
+                except Exception:  # noqa: BLE001
+                    pass
+                ser = None
+                read_errors = 0
+                with self._lock:
+                    self._serial_ok = False
+                time.sleep(0.2)
+                continue
+
+            if chunk:
+                with self._lock:
+                    self._bytes_in += len(chunk)
+                for msgid, payload, crc_ok in parser.feed(chunk):
+                    if crc_ok is False:
+                        continue
+                    self._dispatch(msgid, payload)
 
         if ser is not None:
             try:
@@ -220,7 +255,11 @@ class Px4Node(Node):
             elif msgid == mc.MSG_COMMAND_ACK:
                 ack = mc.decode_command_ack(payload)
                 self._acks += 1
-                if self._verbose:
+                # ★ 每次点名（REQUEST_MESSAGE=512）飞控都会回一条 ACK，
+                # 25 Hz 位置 + 10 Hz 姿态就是每秒 40+ 条，全打出来会把日志淹掉。
+                # 规则：512 的 ACCEPTED 不打；其它命令与非 ACCEPTED 一律打。
+                routine = (ack["command"] == 512 and ack["result"] == 0)
+                if self._verbose and not routine:
                     self.get_logger().info(
                         f"ACK cmd={ack['command']} {ack['result_name']}")
             elif msgid == mc.MSG_STATUSTEXT:
@@ -247,7 +286,11 @@ class Px4Node(Node):
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = "px4"
 
-        hb_fresh = hb_age < self._stale_s
+        # ★ 心跳是 2 Hz 点名的，周期 500 ms，若还用 500 ms 判新鲜会长期在边界抖动
+        #   （正好差几毫秒就判死）。给它 3 个周期的宽限。
+        hb_tol = max(self._stale_s, 3.0 * self._heartbeat_interval) \
+            if self._heartbeat_interval > 0 else self._stale_s
+        hb_fresh = hb_age < hb_tol
         lpn_fresh = lpn_age < self._stale_s
         msg.communication_ok = bool(serial_ok and hb_fresh and lpn_fresh)
 
@@ -309,9 +352,56 @@ class Px4Node(Node):
             }
 
 
+def _acquire_single_instance_lock(dev: str):
+    """同一个串口只允许一个 px4_node 打开。
+
+    ★ 为什么必须做这个：现场踩过两次同类事故（v3.0.0 时两个 MicroXRCEAgent、
+    v3.1.0 时两个 px4_node）。两个进程同时读同一个 tty，字节流被劈成两半、
+    写方向又互相交错，现象是「串口能打开、ACK 偶尔能收到、但状态永远不新鲜」，
+    极难从日志看出根因。用 flock 在进程启动时就把它挡掉。
+
+    返回 (fd, path)；fd 为 None 表示拿不到锁（已在别处运行）。
+    """
+    try:
+        import fcntl
+    except ImportError:
+        return None, None            # 非 Linux，跳过（Windows 侧只跑单元测试）
+
+    slug = dev.strip("/").replace("/", "_") or "default"
+    path = f"/tmp/px4_offboard_{slug}.lock"
+    fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        os.close(fd)
+        return None, path
+    os.truncate(fd, 0)
+    os.write(fd, str(os.getpid()).encode())
+    return fd, path
+
+
 def main(args=None):
     rclpy.init(args=args)
+
+    # 先拿单实例锁，再建节点（建节点就会开串口）
+    dev = "/dev/flight_controller"
+    for i, a in enumerate(sys.argv):
+        if a.startswith("--ros-args"):
+            break
+        if a in ("--dev", "-d") and i + 1 < len(sys.argv):
+            dev = sys.argv[i + 1]
+    lock_fd, lock_path = _acquire_single_instance_lock(dev)
+
     node = Px4Node()
+    if lock_fd is None and lock_path:
+        node.get_logger().fatal(
+            f"已有一个 px4_node 在占用 {dev}（锁文件 {lock_path}）。"
+            f" 两个进程同时读同一串口会让数据流劈半、现象极难排查 —— 本进程退出。"
+            f" 清理：pkill -f lib/px4_offboard/px4_node")
+        node.destroy_node()
+        rclpy.try_shutdown()
+        return
+
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
@@ -319,6 +409,11 @@ def main(args=None):
     finally:
         node.destroy_node()
         rclpy.try_shutdown()
+        if lock_fd is not None:
+            try:
+                os.close(lock_fd)
+            except Exception:  # noqa: BLE001
+                pass
 
 
 if __name__ == "__main__":
