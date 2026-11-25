@@ -1,5 +1,67 @@
 # 版本变更记录
 
+## v3.2.0 - ESP32-S3 坐标链路跑通：树莓派开热点，12 字节定长帧 1 Hz
+
+树莓派用**自带 WiFi 模块开热点当 AP**，ESP32-S3 作 STA 连上来，以 1 Hz 推 12 字节
+定长坐标帧，树莓派侧发布成 `/esp32/position`。真机实测 **1.000 Hz、无丢帧**，
+桥接进程重启后 ESP32 自动重连。
+
+这条链路解决的是「树莓派怎么和自家的 ESP32 无线说话」这个最底层的问题：
+不开热点就得依赖手机热点或路由器，场地里没有；用 DDS 直连又过不了 WiFi 的发现关。
+先用最小的 12 字节定长帧把热点、DHCP、重连这些坑趟平，再往上叠 `car_link` 的多字段协议。
+
+### 新增
+
+- **`src/comm/pos_link`**（ament_python）
+  - `frame.py` —— 12 字节定长帧的编解码与 CRC-16/CCITT-FALSE（纯标准库，不依赖 ROS）。
+  - `bridge_node.py` —— TCP Server（`0.0.0.0:5000`）→ `/esp32/position`
+    （`geometry_msgs/PointStamped`）。每客户端一线程、`SO_REUSEADDR`、
+    用帧头 `AA 55` 重同步、坏帧退 1 字节重找、序号跳变记账、1 s 看门狗（3 s 无帧告警）。
+  - `test/test_frame.py` —— CRC 标准向量（`"123456789" == 0x29B1`）+ 两帧参考字节
+    + 往返编解码 + 坏帧头/坏帧尾/坏 CRC/未知类型/长度错误 + int16 边界，**不需要 ROS**。
+  - `launch/pos_link.launch.py`、`config/pos_link.yaml`、`README.md`。
+- **`firmware/esp32_pos_tx`**（ESP-IDF v5.5.3，目标 `esp32s3`）
+  - 扫描一次锁定 AP 的 BSSID 与信道（省掉每次开机的全信道扫描）；
+    **连失 5 次自动解锁重新扫描** —— 否则热点换了信道就永远连不上。
+  - `WIFI_PS_NONE`（1 Hz 的数据量下省电没有意义，但省电模式会拉长重传超时）。
+  - 断线等 1 s 重连，**不在 WiFi 事件回调里死循环**。
+- **`docs/protocols/D_UAV_ESP32_POS_LINK_v1.0.md`** —— 拓扑、帧格式、时序、
+  异常处理、**双端对账表**、实测数据。
+- **`deploy/systemd/pos-link.service`** —— 开机自启，`StartLimitIntervalSec=0`
+  （否则端口冲突重启 5 次就被钉死在 failed）。
+- **`tools/pos_link_sim.py`** —— 假 ESP32，按 1 Hz 发包；不 import `pos_link.frame`，
+  没 `colcon build` 也能跑。
+
+### 踩过的坑（供以后查）
+
+- **`WIFI_REASON_NO_AP_FOUND_IN_AUTHMODE_THRESHOLD`（211）**，连续 11 次，全程没有
+  一次 `init -> auth`。根因不在信号、不在信道、不在密码：NetworkManager 生成的 AP
+  同时通告 WPA(v1) 和 WPA2，ESP32 把该热点归为 `WPA_PSK`（扫描结果 `auth=2`、
+  `pair=5`(TKIP+CCMP)、`group=3`(TKIP)），而固件门槛是 `WPA2_PSK`。
+  诊断的关键一步是**把扫描结果打印出来**，而不是继续猜。
+- **`WIFI_AUTH_OPEN` 不能当"关掉门槛"用**：密码 ≥8 位时 ESP-IDF 会静默把 OPEN 门槛
+  提升成 WPA2，日志里能看到 `authmode threshold changes from OPEN to WPA2`。
+  真要放宽，写 `WIFI_AUTH_WPA_PSK`。
+- **开热点不需要 `hostapd`**：NetworkManager 1.46 + `dnsmasq-base` 就够。
+  计划里原本是 hostapd + dnsmasq + 三个自建 systemd 单元，实测发现 NM 已经管着 wlan0，
+  装了 hostapd 反而有被误启动抢网卡的风险 —— 全部砍掉，换成一条 `nmcli` profile。
+- **Windows 上 `ping` 不通但 SSH 通**：代理软件的 TUN 虚拟网卡会拦 ICMP，
+  判断连通性要用 `Test-NetConnection <ip> -Port 22`。
+- **切 AP 后树莓派没有外网**：默认路由被热点接管。这不影响本链路（ROS 2 本地通信走
+  loopback），但**会丢掉 NTP**，长时间跑日志时间会漂，rosbag 时间对齐要注意。
+
+### 参数与端口
+
+| 项 | 值 |
+|---|---|
+| SSID / 密码 | `PiLink` / `raspberry123`（WPA2-PSK，2.4 GHz 信道 6） |
+| 树莓派 AP | `192.168.50.1/24`，DHCP 池 `192.168.50.10–254` |
+| TCP 端口 | `5000` |
+| 帧 | 12 字节定长，`AA 55 / 01 / seq / x(int16) / y(int16) / CRC16 / 0D 0A` |
+| 频率 | 1 Hz |
+
+> 与 `car_link` 的 9000 端口、`AA 55` **变长**帧是两条独立链路，协议不通用，别混。
+
 ## v3.1.0 - 飞控链路改走 MAVLink：`px4_offboard` 换成 Python，只读节点可运行
 
 uXRCE-DDS 那条路走到头了。实测飞控固定向外灌 27 条话题、约 **35 KB/s**，

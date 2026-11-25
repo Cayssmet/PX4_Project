@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>pos_link</name>
+  <version>1.0.0</version>
+  <description>
+    ESP32-S3 坐标链路（WiFi + TCP）：树莓派开热点当 AP，ESP32-S3 作 STA 连上来，
+    以 1 Hz 发送 12 字节定长坐标帧（帧头 + 类型 + 序号 + x/y + CRC16 + 帧尾）。
+    本包负责接收、校验并发布成 /esp32/position（geometry_msgs/PointStamped）。
+    与 car_link 是两条独立链路：car_link 走 9000 端口、变长帧；本条走 5000 端口、定长帧。
+  </description>
+
+  <maintainer email="calxn29@qq.com">Cayssmet</maintainer>
+  <license>MIT</license>
+
+  <depend>rclpy</depend>
+  <depend>geometry_msgs</depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

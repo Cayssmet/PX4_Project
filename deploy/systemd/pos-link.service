@@ -1,0 +1,54 @@
+[Unit]
+Description=pos_link bridge (ESP32-S3 TCP :5000 -> /esp32/position)
+Documentation=https://github.com/Cayssmet/PX4_Project/blob/main/docs/protocols/D_UAV_ESP32_POS_LINK_v1.0.md
+# 热点由 NetworkManager 提供，桥接节点必须等它把 wlan0 拉起来再启动
+After=NetworkManager.service
+Wants=NetworkManager.service
+# 桥接进程会因端口占用/环境没 source 好而失败重启；设为 0 = 永不放弃，
+# 否则默认「10 秒内失败 5 次」就把服务钉死在 failed 状态，看起来像"开机没起来"。
+StartLimitIntervalSec=0
+
+[Service]
+Type=exec
+User=ljz
+
+# ★ 两个 setup.bash 都必须 source：
+#   缺 /opt/ros/jazzy/setup.bash → import rclpy 失败（ModuleNotFoundError）；
+#   缺工作区 install/setup.bash   → 找不到 pos_link 包（Package 'pos_link' not found）。
+#   ★★ 路径按实际工作区改。用 bash -lc 而不是直接 ExecStart=ros2，
+#   是因为 systemd 不读 ~/.bashrc，环境变量得自己拼。
+Environment=ROS_SETUP=/opt/ros/jazzy/setup.bash
+Environment=WS_SETUP=/home/ljz/px4_ws/install/setup.bash
+ExecStart=/bin/bash -lc 'source $ROS_SETUP && source $WS_SETUP && exec ros2 run pos_link bridge --ros-args -p listen_port:=5000'
+
+# 崩了（ESP32 掉线不会导致崩溃，但端口冲突/环境问题会）就 5 秒后重来
+Restart=always
+RestartSec=5
+# 停止时给 3 秒收尾再强杀整个 cgroup
+TimeoutStopSec=3
+KillMode=control-group
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pos-link
+
+[Install]
+WantedBy=multi-user.target
+
+# ---------------------------------------------------------------------------
+# 安装与排查（树莓派上执行）
+#
+#   sudo cp deploy/systemd/pos-link.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now pos-link
+#   systemctl status pos-link --no-pager
+#   journalctl -u pos-link -f
+#
+# 常见失败：
+#   OSError: [Errno 98] Address already in use
+#       → 手动跑的 bridge 进程还占着 5000：pkill -f 'pos_link.*bridge' 后再 start
+#   Package 'pos_link' not found
+#       → WS_SETUP 指向的 install/setup.bash 不对，或者根本没 colcon build
+#   ModuleNotFoundError: No module named 'rclpy'
+#       → ROS_SETUP 没 source 到（确认路径是本机真实路径）
+# ---------------------------------------------------------------------------

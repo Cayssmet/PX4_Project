@@ -156,3 +156,50 @@ ros2 topic list | grep -c fmu        # 期望 65 左右
 - 串口设备：`/dev/flight_controller` → `/dev/ttyUSB0`（udev 规则按 USB 物理路径绑定，**必须插回原来那个 USB 口**）
 - 460800 实测：`vehicle_attitude` 56–58 Hz、`vehicle_local_position_v1` 4.7 Hz、`vehicle_status_v1` 0.6 Hz、话题 65 条
 - 115200 实测（对照）：`vehicle_attitude` 1.2 Hz、`vehicle_local_position_v1` 0.7 Hz
+
+---
+
+## 8. `pos-link.service`（ESP32-S3 坐标链路，v3.2.0 新增）
+
+和上面的 Agent 不是一件事：Agent 走**串口**接飞控；`pos-link` 走**WiFi** 接 ESP32-S3。
+两个服务互不影响，可以同时开。
+
+### 装
+
+```bash
+sudo cp deploy/systemd/pos-link.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now pos-link
+systemctl status pos-link --no-pager
+journalctl -u pos-link -f
+```
+
+### 前置条件
+
+| 条件 | 检查命令 | 期望 |
+|---|---|---|
+| 热点在跑 | `nmcli connection show --active` | 有 `PiLink` |
+| AP 地址在 | `ip -4 addr show wlan0` | `192.168.50.1/24` |
+| 工作区编过 | `ls install/setup.bash` | 存在 |
+| 端口空着 | `ss -ltnp \| grep ':5000'` | 无输出 |
+
+> ★ `pos-link.service` 里的 `WS_SETUP` 默认写的是 `/home/ljz/px4_ws/install/setup.bash`，
+> **按实际工作区路径改**。路径错了的现象是 `Package 'pos_link' not found` 然后 5 秒一重启。
+
+### 排障
+
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| `status` 里 `activating (auto-restart)` 循环 | `WS_SETUP` 路径不对 / 没 `colcon build` | 改 `Environment=WS_SETUP=`，`daemon-reload` 后 restart |
+| 日志 `ModuleNotFoundError: No module named 'rclpy'` | `ROS_SETUP` 没 source 到 | 确认 `/opt/ros/jazzy/setup.bash` 存在且路径正确 |
+| 日志 `OSError: [Errno 98] Address already in use` | 手动跑的 bridge 还占着 5000 | `pkill -f 'pos_link.*bridge'`，确认 `ss -ltnp \| grep ':5000'` 空后再 `systemctl start` |
+| 起来了但一直 `3s 未收到帧` | ESP32 没连上 / 固件端口或 IP 不对 | `journalctl -u pos-link \| grep 客户端` 看有没有「客户端接入」 |
+| 服务启动 5 次后就躺平不再重启 | 少了 `StartLimitIntervalSec=0` | 本仓库的 unit 已经带上；抄旧 unit 时要补 |
+
+### 停 / 回滚
+
+```bash
+sudo systemctl disable --now pos-link      # 关掉并取消开机自启
+# 热点本身要回滚成普通 WiFi（会影响 SSH，直接在树莓派本地终端做）：
+sudo nmcli connection down PiLink
+```

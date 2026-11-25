@@ -1,0 +1,12 @@
+# pos_link 桥接节点参数。
+#
+# 节点名必须写成 wifi_bridge —— 那是 bridge_node.py 里 super().__init__("wifi_bridge")
+# 定死的；改这里不会改节点名，只会让参数对不上、悄悄用上默认值。
+wifi_bridge:
+  ros__parameters:
+    # 和固件里的 HOST_PORT 必须一致，否则 ESP32 连上来立刻被 RST。
+    listen_port: 5000
+    # 只是个标签：本系统没有 base_link，不参与 TF 变换。
+    frame_id: esp32
+    # 超过这么多秒没收到帧就告警（ESP32 1 Hz 发帧，3 s 等于连丢 3 帧）。
+    timeout_s: 3.0
