@@ -7,7 +7,7 @@
     ESP32-S3 坐标下行链路（WiFi + TCP）：树莓派开热点当 AP 并监听 5000 端口，
     ESP32-S3 作 STA 连上来，树莓派以 1 Hz 下发 12 字节定长坐标帧
     （帧头 + 类型 + 序号 + x/y + CRC16 + 帧尾）。
-    本包订阅 <input_topic>（geometry_msgs/PointStamped）拿坐标，打包后推给 ESP32；
+    本包订阅 input_topic（geometry_msgs/PointStamped）拿坐标，打包后推给 ESP32；
     坐标源由上层决定，本包只负责传输。
     与 car_link 是两条独立链路：car_link 走 9000 端口、变长帧；本条走 5000 端口、定长帧。
   </description>

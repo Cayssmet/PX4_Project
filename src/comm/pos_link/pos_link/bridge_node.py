@@ -54,13 +54,15 @@ class PosLinkBridge(Node):
         self._stale_warn_s = float(self.get_parameter("stale_warn_s").value)
 
         self._lock = threading.Lock()
-        self._clients: List[socket.socket] = []
+        # 别叫 _clients：rclpy 的 Node 内部也用 _clients 存 graph 实体，
+        # 覆盖它会让 executor 在 spin 时把 socket 当成 client 去取 .handle 而崩溃。
+        self._peers: List[socket.socket] = []
         self._target: Optional[Tuple[int, int]] = None
         self._target_time = 0.0
 
         self._seq = 0
         self._frames_sent = 0
-        self._clients_dropped = 0
+        self._peers_dropped = 0
         self._running = True
 
         self._server = self._open_server()
@@ -112,22 +114,22 @@ class PosLinkBridge(Node):
                 pass
 
             with self._lock:
-                self._clients.append(conn)
-                count = len(self._clients)
+                self._peers.append(conn)
+                count = len(self._peers)
             self.get_logger().info(f"ESP32 已接入 {addr[0]}:{addr[1]}（当前 {count} 个连接）")
 
     def _drop_client(self, conn: socket.socket, why: str) -> None:
         with self._lock:
-            if conn in self._clients:
-                self._clients.remove(conn)
-                left = len(self._clients)
+            if conn in self._peers:
+                self._peers.remove(conn)
+                left = len(self._peers)
             else:
-                left = len(self._clients)
+                left = len(self._peers)
         try:
             conn.close()
         except OSError:
             pass
-        self._clients_dropped += 1
+        self._peers_dropped += 1
         self.get_logger().warning(f"断开一个 ESP32 连接（剩余 {left} 个）：{why}")
 
     # ---------------- 坐标来源 ----------------
@@ -155,7 +157,7 @@ class PosLinkBridge(Node):
 
     def _tick(self) -> None:
         with self._lock:
-            clients = list(self._clients)
+            clients = list(self._peers)
             target = self._target
             age = time.monotonic() - self._target_time
 
@@ -201,9 +203,9 @@ class PosLinkBridge(Node):
 
     def _report(self) -> None:
         with self._lock:
-            n = len(self._clients)
+            n = len(self._peers)
         self.get_logger().info(
-            f"统计：已发 {self._frames_sent} 帧，在线连接 {n} 个，累计断开 {self._clients_dropped} 次"
+            f"统计：已发 {self._frames_sent} 帧，在线连接 {n} 个，累计断开 {self._peers_dropped} 次"
         )
 
     # ---------------- 收尾 ----------------
@@ -217,8 +219,8 @@ class PosLinkBridge(Node):
             except OSError:
                 pass
         with self._lock:
-            clients = list(self._clients)
-            self._clients.clear()
+            clients = list(self._peers)
+            self._peers.clear()
         for conn in clients:
             try:
                 conn.close()
