@@ -159,10 +159,14 @@ ros2 topic list | grep -c fmu        # 期望 65 左右
 
 ---
 
-## 8. `pos-link.service`（ESP32-S3 坐标链路，v3.2.0 新增）
+## 8. `pos-link.service`（树莓派 → ESP32-S3 坐标下发，v3.2.0 新增）
 
-和上面的 Agent 不是一件事：Agent 走**串口**接飞控；`pos-link` 走**WiFi** 接 ESP32-S3。
-两个服务互不影响，可以同时开。
+和上面的 Agent 不是一件事：Agent 走**串口**接飞控；`pos-link` 走**WiFi** 把坐标
+**下发给** ESP32-S3（方向：树莓派 → ESP32）。两个服务互不影响，可以同时开。
+
+它自己**不产生坐标**：只订阅一个话题（默认 `/pos_link/target`，
+`geometry_msgs/PointStamped`），谁算出坐标谁发。换坐标源改 `input_topic` 即可，
+详见 `src/comm/pos_link/README.md`。
 
 ### 装
 
@@ -193,7 +197,8 @@ journalctl -u pos-link -f
 | `status` 里 `activating (auto-restart)` 循环 | `WS_SETUP` 路径不对 / 没 `colcon build` | 改 `Environment=WS_SETUP=`，`daemon-reload` 后 restart |
 | 日志 `ModuleNotFoundError: No module named 'rclpy'` | `ROS_SETUP` 没 source 到 | 确认 `/opt/ros/jazzy/setup.bash` 存在且路径正确 |
 | 日志 `OSError: [Errno 98] Address already in use` | 手动跑的 bridge 还占着 5000 | `pkill -f 'pos_link.*bridge'`，确认 `ss -ltnp \| grep ':5000'` 空后再 `systemctl start` |
-| 起来了但一直 `3s 未收到帧` | ESP32 没连上 / 固件端口或 IP 不对 | `journalctl -u pos-link \| grep 客户端` 看有没有「客户端接入」 |
+| 日志一直 `还没有 ESP32 连上来，等待中……` | 板子没连上热点，或固件 `HOST_IP`/`HOST_PORT` 不对 | 板上串口看有没有 `TCP 已连接 192.168.50.1:5000`；`journalctl -u pos-link \| grep 接入` |
+| 日志一直 `还没有坐标` / 板上一直 `3 秒没收到帧` | 坐标源没起，链路是通的 | `ros2 topic pub -r 1 /pos_link/target geometry_msgs/msg/PointStamped "{point: {x: 120.0, y: 80.0}}"` 喂一个试试 |
 | 服务启动 5 次后就躺平不再重启 | 少了 `StartLimitIntervalSec=0` | 本仓库的 unit 已经带上；抄旧 unit 时要补 |
 
 ### 停 / 回滚

@@ -1,5 +1,53 @@
 # 版本变更记录
 
+## v3.2.1 - pos_link 方向反转：树莓派 → ESP32-S3 坐标下发
+
+项目要的是**树莓派把坐标发给 ESP32**（树莓派算、ESP32 执行），v3.2.0 归档时写反了
+（ESP32 发、树莓派收）。本版把整条链路的方向、角色、文档和固件一起改正。
+
+协议本身**一个字节都没改**：仍是 12 字节定长帧、CRC-16/CCITT-FALSE、
+两条参考帧照旧。改的只是「谁发谁收」和传输角色。
+
+### 变更
+
+- **传输角色**：树莓派仍是 TCP **服务端**（`0.0.0.0:5000`），ESP32 仍是主动连上来的
+  **客户端**——这点不变，因为 ESP32 的 IP 是 DHCP 分的，树莓派事先不知道它。
+  变的是连接建立后**由树莓派往里推帧**，ESP32 只收。
+- **`src/comm/pos_link`**（v1.0.0 → **v1.1.0**）
+  - `bridge_node.py` 重写：`wifi_bridge` → `pos_link_bridge`；不再监听解析，改为
+    **订阅** `input_topic`（默认 `/pos_link/target`，`geometry_msgs/PointStamped`）
+    → 按 `send_period_ms` 重采样 → `build_frame()` → `sendall()` 给所有已连接客户端。
+  - **坐标来源做成接口**：只订阅一个话题，换源不用改代码。另有
+    `hold_last_on_stale`（坐标过期是否继续发最后值，默认 `true`）与
+    `stale_warn_s`；坐标超 int16 自动夹值并告警，NaN/Inf 丢弃。
+  - `frame.py` 新增 `FrameReader`（增量帧解析，逐字节重同步），给假 ESP32 和
+    单元测试共用；`build_frame()`/`parse_frame()` 行为与字节输出完全不变。
+  - `test/test_frame.py` 扩到 20 个用例：新增拆包、逐字节喂、背靠背帧、
+    垃圾前缀、坏 CRC 后自愈、`0xAA` 跨块等 `FrameReader` 场景。
+  - `launch`/`config` 参数改为 `listen_port`、`input_topic`、`send_period_ms`。
+- **`firmware/esp32_pos_tx` → `firmware/esp32_pos_rx`**（`project(esp32_pos_rx)`，
+  TAG `pos_rx`）：改为接收端——`tcp_connect()` 后逐字节找 `AA 55` 收满 12 字节，
+  校验帧头/帧尾/类型/CRC，通过则回调 `on_position(seq, x, y)`（**留给执行机构的钩子**）。
+  3 s 接收超时只告警不收线；TCP 断开 1 s 后重连。WiFi 底层（扫描锁 BSSID、
+  失联 5 次解锁、`WIFI_AUTH_WPA_PSK` 门槛、`WIFI_PS_NONE`）原样保留。
+- **`tools/pos_link_sim.py`**：从「假 ESP32 发包」改为「假 ESP32 收包」——
+  连上来收帧、校验、统计好帧/坏帧/序号跳变、断线自动重连。
+- **`docs/protocols/D_UAV_ESP32_POS_LINK_v1.0.md`** 重写：方向、角色、时序、
+  异常处理表、双端对账表全部按树莓派 → ESP32 更正；新增「坐标源断了怎么办」。
+  原 v3.2.0 里 ESP32 → 树莓派 的 1.000 Hz 实测数据**不再适用于本方向**，
+  文档里明确标注待上板复核，不拿旧数据充数。
+- `deploy/systemd/pos-link.service`：`Description` 与 `ExecStart` 增加
+  `input_topic:=/pos_link/target`；注释说明它不产生坐标。
+
+### 迁移
+
+```bash
+colcon build --packages-select pos_link
+# 树莓派上（坐标源自己也起了之后）
+ros2 launch pos_link pos_link.launch.py
+# 板上：重新烧 firmware/esp32_pos_rx（旧 esp32_pos_tx 是反方向，必须换）
+```
+
 ## v3.2.0 - ESP32-S3 坐标链路跑通：树莓派开热点，12 字节定长帧 1 Hz
 
 树莓派用**自带 WiFi 模块开热点当 AP**，ESP32-S3 作 STA 连上来，以 1 Hz 推 12 字节

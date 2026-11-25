@@ -1,99 +1,110 @@
-# pos_link —— ESP32-S3 坐标链路（WiFi + TCP）
+# pos_link —— 树莓派 → ESP32-S3 坐标下行链路（WiFi + TCP）
 
-树莓派用**自带 WiFi 模块开热点当 AP**，ESP32-S3 作 STA 连上来，以 **1 Hz** 推送
-**12 字节定长坐标帧**；本包在树莓派侧收帧、校验，并发布成
-`/esp32/position`（`geometry_msgs/PointStamped`）。
+树莓派用自带 WiFi 开热点当 AP，ESP32-S3 作 STA 连上来，树莓派把算好的坐标
+以 **1 Hz、12 字节定长帧**推给 ESP32。ESP32 收到就直接拿去执行。
 
 ```
-ESP32-S3 ──WiFi──► 树莓派 wlan0 192.168.50.1 (AP, SSID PiLink)
-                        │
-                        └─ bridge 节点 TCP :5000 ──► /esp32/position
+  坐标源（定位/任务/手敲命令）
+        │  geometry_msgs/PointStamped
+        ▼  <input_topic>  默认 /pos_link/target
+  ┌──────────────────────── 树莓派 ────────────────────────┐
+  │  pos_link_bridge: 订阅 → 打包 12 字节帧 → TCP 推送      │
+  │  热点 PiLink 192.168.50.1/24，TCP 服务端 :5000          │
+  └────────────────────────────┬───────────────────────────┘
+                               │ WiFi（ESP32 主动连上来）
+                               ▼
+                    ESP32-S3：收帧 → 校验 → 执行
 ```
 
-## 一分钟跑起来
+**这条链路只负责搬运**：坐标怎么算、算了准不准、ESP32 收到干什么，都不在本包范围。
+换坐标源不用改代码，改 `input_topic` 就行。
 
-树莓派上（热点已在跑）::
+## 快速开始
 
 ```bash
-source /opt/ros/jazzy/setup.bash
+# 1. 编
+cd <工作区根目录>
 colcon build --packages-select pos_link
 source install/setup.bash
+
+# 2. 起桥接节点（会打印「已监听 0.0.0.0:5000」）
 ros2 launch pos_link pos_link.launch.py
+
+# 3. 没有真坐标源时，手敲一个假的（另开一个终端）
+ros2 topic pub -r 1 /pos_link/target geometry_msgs/msg/PointStamped \
+  "{header: {frame_id: map}, point: {x: 120.0, y: 80.0}}"
+
+# 4. 没有真板子时，用假 ESP32 看帧到没到
+python3 tools/pos_link_sim.py            # 默认连 192.168.50.1:5000
+python3 tools/pos_link_sim.py --host 127.0.0.1   # 就在本机连
 ```
 
-ESP32-S3 上电后应当看到::
+正常情况下桥接节点每 5 秒打印一行 `已下发 seq=.. x=.. y=..`，假 ESP32 每帧打一行。
 
-```
-[INFO] [wifi_bridge]: TCP 监听 0.0.0.0:5000
-[INFO] [wifi_bridge]: 客户端接入 192.168.50.240:62349
-[INFO] [wifi_bridge]: 帧 seq=0 x=7 y=3 累计=1
-```
+## 坐标从哪来（接口）
 
-验证::
+本节点**只订阅一个话题**，这就是它的全部输入接口：
 
-```bash
-ros2 topic echo /esp32/position
-ros2 topic hz /esp32/position        # 应为 1.000 Hz 左右
-```
+| 项目 | 值 |
+|---|---|
+| 消息类型 | `geometry_msgs/PointStamped` |
+| 默认话题 | `/pos_link/target`（参数 `input_topic` 可改） |
+| 取值字段 | `point.x`、`point.y`（单位随你，协议里只是 int16） |
+| 频率 | 任意。节点自己按 `send_period_ms` 重采样，只取「最近一次」 |
+| 坐标系 | 不解释。`frame_id` 只做日志，本包不做 TF 变换 |
 
-没有 ESP32 也能验：`python3 ../../../tools/pos_link_sim.py`（假 ESP32，按 1 Hz 发包）。
+几种接法：
 
-## 协议
+- **定位节点直接发**：把它的输出 remap 到 `/pos_link/target`。
+- **任务层算完再发**：`competition_g` 决策后发目标点，本包负责送下去。
+- **临时手测**：`ros2 topic pub`（见上）。
+- **换成非话题来源**（比如服务调用、读文件）：改 `bridge_node.py` 的
+  `_on_target()` 即可，它是唯一的入口，改完不用动别的地方。
 
-| 偏移 | 长度 | 字段 |
-|---|---|---|
-| 0 | 2 | 帧头 `0xAA 0x55` |
-| 2 | 1 | 类型，`0x01` = 坐标帧 |
-| 3 | 1 | 序号 seq，0–255 循环 |
-| 4 | 2 | x，int16 小端 |
-| 6 | 2 | y，int16 小端 |
-| 8 | 2 | CRC16-CCITT-FALSE，覆盖偏移 0–7 |
-| 10 | 2 | 帧尾 `0x0D 0x0A` |
-
-完整说明（含参考帧、双端对账表）见
-`docs/protocols/D_UAV_ESP32_POS_LINK_v1.0.md`。
+坐标源断了：默认 `hold_last_on_stale: true`——继续发最后一次值（对执行机构来说
+「知道位置但不动」比「突然没指令」安全），同时打告警。想改成「断了就停发」，
+把该参数设成 `false`。
 
 ## 参数
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `listen_port` | `5000` | 必须和固件 `HOST_PORT` 一致 |
-| `frame_id` | `esp32` | 只是标签，本系统不做 TF 变换 |
-| `timeout_s` | `3.0` | 超时告警阈值（1 Hz 下等于连丢 3 帧） |
+| `listen_port` | `5000` | 监听端口，必须和固件 `HOST_PORT` 一致 |
+| `input_topic` | `/pos_link/target` | 坐标来源话题 |
+| `send_period_ms` | `1000` | 下发周期（毫秒），最小 50 |
+| `hold_last_on_stale` | `true` | 坐标过期还发不发 |
+| `stale_warn_s` | `5.0` | 多久没新坐标算过期 |
 
-`config/pos_link.yaml` 里的节点名必须写 `wifi_bridge` —— 那是代码里定死的节点名。
+`config/pos_link.yaml` 里的顶层键必须是 **`pos_link_bridge`** —— 那是代码里
+定死的节点名，写错了参数会静默不生效。
 
-## 设计取舍
+## 怎么确认在正常工作
 
-- **为什么不用 DDS / micro-ROS 直连？** DDS 的发现靠多播，跨 WiFi 经常发现不到；
-  1 Hz 两路坐标用 TCP + 12 字节定长帧，故障面小得多，抓包也看得懂。
-- **为什么是定长帧而不是变长帧？** 12 字节、1 Hz，带宽从来不是瓶颈。定长让接收端
-  只要 12 字节窗口 + 两个常数比较就能切帧，不用维护长度字段和状态机。
-- **为什么不做重传？** TCP 已经保证了不丢不乱；上层再叠重传，只会让「丢一帧」
-  变成「卡两秒」。1 Hz 的坐标丢一帧，下一秒就补上了。
-- **为什么 ESP32 主动连、树莓派只听？** 树莓派不用知道 ESP32 的 IP；ESP32 重启、
-  DHCP 换地址、掉线重连，树莓派这边都只是「一个客户端断开、一会儿再来一个」。
+| 看什么 | 正常应该看到 |
+|---|---|
+| 节点启动日志 | `已监听 0.0.0.0:5000（等 ESP32 连上来）…` |
+| ESP32 连上 | `ESP32 已接入 192.168.50.240:xxxxx（当前 1 个连接）` |
+| 有坐标、在发 | `已下发 seq=12 x=120 y=80（1 个连接）` |
+| 每 10 秒统计 | `统计：已发 130 帧，在线连接 1 个，累计断开 0 次` |
+| 变量核对 | `ros2 param get /pos_link_bridge input_topic` |
 
-## 测试
+## 和 `car_link` 的关系
 
-```bash
-cd src/comm/pos_link && python3 -m pytest test -q
-```
-
-`test_frame.py` 覆盖 CRC 标准向量、两帧参考字节、往返编解码、坏 CRC / 坏帧尾 /
-坏帧头 / 未知类型 / 长度错误，以及 int16 边界。**不需要 ROS**。
-
-## 与 car_link 的区别
-
-两条链路互不相干，别混：
+同一套「树莓派开热点 + ESP32 连上来」的底层，但**两条独立链路、互不影响**：
 
 | | `pos_link`（本包） | `car_link` |
 |---|---|---|
 | 端口 | 5000 | 9000 |
-| 帧 | 12 字节定长 | `AA 55` 变长（带 LEN 字段） |
-| 频率 | 1 Hz | 2 Hz（`DRONE_POSE`） |
-| 内容 | 只有 x/y | 位姿、火点、航程、状态、ACK |
-| 状态 | **已真机跑通** | 骨架，协议已冻结 |
+| 帧 | 12 字节定长 | `AA 55` + 变长 `LEN` + 多字段 |
+| 方向 | 树莓派 → ESP32（单向下发） | 双向 |
+| 用途 | 只送坐标（最小可用） | 指挥车正式协议 |
 
-`car_link` 是指挥车的正式链路；`pos_link` 是同一套「树莓派开热点 + ESP32 连上来」
-思路的最小可用实现，先把它跑通、把热点和重连这些坑趟平，再往上叠 `car_link` 的多字段协议。
+## 测试
+
+```bash
+cd src/comm/pos_link
+python3 -m pytest test -q      # 不需要 ROS、不需要硬件
+```
+
+测试里有两条**参考帧**的期望字节，和协议文档、固件 `build_frame()` 是同一份值。
+改了协议这三处必须一起改，否则测试会红——这是故意的。

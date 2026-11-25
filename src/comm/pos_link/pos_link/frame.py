@@ -1,79 +1,122 @@
-"""12 字节定长帧的编码、解码与 CRC 校验。
+"""pos_link 帧编解码 —— 12 字节定长坐标帧。
 
-帧结构（小端）：
+本模块只用标准库，不依赖 ROS，方便在树莓派上单独跑测试。
 
-======  ======  ===========================================
-偏移    长度    字段
-======  ======  ===========================================
-0       2       帧头 ``0xAA 0x55``
-2       1       类型，``0x01`` = 坐标帧
-3       1       序号 seq，0–255 循环
-4       2       x，int16
-6       2       y，int16
-8       2       CRC16-CCITT-FALSE，覆盖偏移 0–7
-10      2       帧尾 ``0x0D 0x0A``
-======  ======  ===========================================
+帧格式（12 字节，小端）：
 
-这个定义和 ESP32 侧的 ``firmware/esp32_pos_tx/main/main.c`` 里的 ``build_frame()``
-是同一份东西，**改一边必须改另一边**，否则表现为「能连上但一帧也解不出来」。
+    [0]  0xAA          帧头
+    [1]  0x55          帧头
+    [2]  0x01          类型：坐标帧
+    [3]  seq           序号 0~255 循环
+    [4]  x & 0xFF      X 低字节
+    [5]  x >> 8        X 高字节   (int16)
+    [6]  y & 0xFF      Y 低字节
+    [7]  y >> 8        Y 高字节   (int16)
+    [8]  crc & 0xFF    CRC-16/CCITT-FALSE 低字节，覆盖 [0]~[7]
+    [9]  crc >> 8      CRC-16/CCITT-FALSE 高字节
+    [10] 0x0D          帧尾
+    [11] 0x0A          帧尾
 
-为什么是定长而不是变长：本链路 1 Hz、每帧 12 字节，带宽从来不是瓶颈，
-定长帧让接收端只需要一个 12 字节窗口 + 两个常数比较就能切帧，
-不用维护长度字段和状态机，出错面最小。
+方向：**树莓派 → ESP32**。树莓派算好坐标、打包、推给 ESP32；
+ESP32 收到后直接拿去驱动执行机构。见 docs/protocols/D_UAV_ESP32_POS_LINK_v1.0.md。
 """
 
+from __future__ import annotations
+
 import struct
+from typing import List, Optional, Tuple
 
 HEAD = b"\xAA\x55"
 TAIL = b"\x0D\x0A"
 FRAME_LEN = 12
 TYPE_POS = 0x01
 
-#: CRC 参数：poly 0x1021、init 0xFFFF、不反射、无终异或（即 CRC-16/CCITT-FALSE）
-CRC_POLY = 0x1021
-CRC_INIT = 0xFFFF
+INT16_MIN = -32768
+INT16_MAX = 32767
+
+#: parse_frame() 的返回类型：(seq, x, y)
+PosFrame = Tuple[int, int, int]
 
 
 def crc16_ccitt(data: bytes) -> int:
-    """CRC-16/CCITT-FALSE。
-
-    自测向量：``crc16_ccitt(b"123456789") == 0x29B1``。
-    """
-    crc = CRC_INIT
+    """CRC-16/CCITT-FALSE：poly 0x1021，init 0xFFFF，不反射，输出不异或。"""
+    crc = 0xFFFF
     for byte in data:
         crc ^= byte << 8
         for _ in range(8):
             if crc & 0x8000:
-                crc = ((crc << 1) ^ CRC_POLY) & 0xFFFF
+                crc = ((crc << 1) ^ 0x1021) & 0xFFFF
             else:
                 crc = (crc << 1) & 0xFFFF
     return crc
 
 
 def build_frame(x: int, y: int, seq: int) -> bytes:
-    """按帧格式拼出 12 字节，主要给测试和假 ESP32 用。"""
-    x = int(x)
-    y = int(y)
-    if not (-32768 <= x <= 32767 and -32768 <= y <= 32767):
-        raise ValueError(f"坐标超出 int16 范围：x={x} y={y}")
-    body = HEAD + struct.pack("<BBhh", TYPE_POS, int(seq) & 0xFF, x, y)
-    return body + struct.pack("<H", crc16_ccitt(body)) + TAIL
+    """把 (x, y) 打包成 12 字节帧。坐标超出 int16 直接抛 ValueError。
 
-
-def parse_frame(frame: bytes):
-    """解一帧。成功返回 ``(seq, x, y)``，任何一项不合法都返回 ``None``。
-
-    这个函数不负责找帧头 —— 那是接收缓冲区的事（见 ``bridge_node._drain``）。
-    它只回答一个问题：这 12 个字节是不是一帧好的坐标帧。
+    >>> build_frame(100, 200, 0).hex(" ").upper()
+    'AA 55 01 00 64 00 C8 00 E5 FC 0D 0A'
     """
+    for name, value in (("x", x), ("y", y)):
+        if not INT16_MIN <= value <= INT16_MAX:
+            raise ValueError(f"{name}={value} 超出 int16 范围 [{INT16_MIN}, {INT16_MAX}]")
+
+    body = HEAD + struct.pack("<BBhh", TYPE_POS, seq & 0xFF, x, y)  # 8 字节
+    crc = crc16_ccitt(body)
+    return body + struct.pack("<H", crc) + TAIL
+
+
+def parse_frame(frame: bytes) -> Optional[PosFrame]:
+    """解析一帧，返回 (seq, x, y)；帧头/帧尾/类型/CRC 任何一项不对都返回 None。"""
     if len(frame) != FRAME_LEN:
         return None
-    if frame[0:2] != HEAD or frame[10:12] != TAIL:
+    if frame[:2] != HEAD or frame[10:] != TAIL:
         return None
     if frame[2] != TYPE_POS:
         return None
-    crc_rx = struct.unpack_from("<H", frame, 8)[0]
-    if crc16_ccitt(frame[0:8]) != crc_rx:
+    if crc16_ccitt(frame[:8]) != struct.unpack_from("<H", frame, 8)[0]:
         return None
-    x, y = struct.unpack_from("<hh", frame, 4)
-    return frame[3], x, y
+
+    _, seq, x, y = struct.unpack("<BBhh", frame[2:8])
+    return seq, x, y
+
+
+class FrameReader:
+    """增量帧解析器：喂任意长度的字节流，吐出其中的完整好帧。
+
+    为什么要有它：TCP 是字节流，一次 recv 可能只拿到半帧、也可能一次拿到三帧
+    外加半截垃圾。固件 `main.c` 里是同一套状态机（逐字节找 `AA 55`），
+    这个类让那套逻辑在 Python 侧也能被测到——`tools/pos_link_sim.py` 就是拿它
+    冒充 ESP32 收帧的。
+    """
+
+    def __init__(self) -> None:
+        self._buf = bytearray()
+
+    def reset(self) -> None:
+        self._buf.clear()
+
+    def feed(self, data: bytes) -> List[PosFrame]:
+        """喂一段字节，返回这次凑齐的好帧（可能不止一个）。"""
+        frames: List[PosFrame] = []
+        self._buf.extend(data)
+
+        while True:
+            start = self._buf.find(HEAD)
+            if start < 0:
+                # 没有帧头：只留最后一个字节，防止 0xAA 被切在两次 feed 之间
+                if len(self._buf) > 1:
+                    del self._buf[:-1]
+                break
+            if start:
+                del self._buf[:start]
+            if len(self._buf) < FRAME_LEN:
+                break
+
+            frame = bytes(self._buf[:FRAME_LEN])
+            del self._buf[:FRAME_LEN]
+            parsed = parse_frame(frame)
+            if parsed is not None:
+                frames.append(parsed)
+
+        return frames

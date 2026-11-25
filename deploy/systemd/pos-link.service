@@ -1,5 +1,5 @@
 [Unit]
-Description=pos_link bridge (ESP32-S3 TCP :5000 -> /esp32/position)
+Description=pos_link bridge (ROS 2 <input_topic> -> ESP32-S3, TCP :5000)
 Documentation=https://github.com/Cayssmet/PX4_Project/blob/main/docs/protocols/D_UAV_ESP32_POS_LINK_v1.0.md
 # 热点由 NetworkManager 提供，桥接节点必须等它把 wlan0 拉起来再启动
 After=NetworkManager.service
@@ -19,7 +19,12 @@ User=ljz
 #   是因为 systemd 不读 ~/.bashrc，环境变量得自己拼。
 Environment=ROS_SETUP=/opt/ros/jazzy/setup.bash
 Environment=WS_SETUP=/home/ljz/px4_ws/install/setup.bash
-ExecStart=/bin/bash -lc 'source $ROS_SETUP && source $WS_SETUP && exec ros2 run pos_link bridge --ros-args -p listen_port:=5000'
+ExecStart=/bin/bash -lc 'source $ROS_SETUP && source $WS_SETUP && exec ros2 run pos_link bridge --ros-args -p listen_port:=5000 -p input_topic:=/pos_link/target'
+
+# 坐标从哪来：本服务只订阅 input_topic（geometry_msgs/PointStamped），
+# 不负责产生坐标。开机时如果坐标源还没起来，它会一直打「还没有坐标」，
+# 这是正常的——插件式的设计，先有链路再有数据。
+# 想换成别的话题：改上面 ExecStart 里的 input_topic：=，再 daemon-reload。
 
 # 崩了（ESP32 掉线不会导致崩溃，但端口冲突/环境问题会）就 5 秒后重来
 Restart=always
@@ -51,4 +56,6 @@ WantedBy=multi-user.target
 #       → WS_SETUP 指向的 install/setup.bash 不对，或者根本没 colcon build
 #   ModuleNotFoundError: No module named 'rclpy'
 #       → ROS_SETUP 没 source 到（确认路径是本机真实路径）
+#   连上了但 ESP32 一直"3 秒没收到帧"
+#       → 本机没有坐标源：ros2 topic pub /pos_link/target … 喂一个试试
 # ---------------------------------------------------------------------------

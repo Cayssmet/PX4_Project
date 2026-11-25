@@ -1,187 +1,228 @@
-# D_UAV_ESP32_POS_LINK v1.0 —— 树莓派 ↔ ESP32-S3 坐标链路
+# D_UAV_ESP32_POS_LINK_v1.0 —— 树莓派 → ESP32-S3 坐标下行链路
 
 | 项 | 值 |
 |---|---|
-| 文档编号 | `D_UAV_ESP32_POS_LINK` |
-| 版本 | v1.0 |
-| 状态 | **已真机跑通**（树莓派 5 + Ubuntu 24.04 + ROS 2 Jazzy + ESP32-S3 / ESP-IDF v5.5.3） |
-| 涉及包 | `src/comm/pos_link`（树莓派侧）、`firmware/esp32_pos_tx`（ESP32 侧） |
-| 上游相关 | `D_UAV_UNIFIED_DEVICE_PROTOCOL_v1.7`（三条链路的统一 `AA 55` 封装思路）、`docs/通信协议设计_v1.md`（`car_link` 的变长帧） |
+| 协议版本 | v1.0（2026-11，方向：树莓派 → ESP32） |
+| 涉及包 | `src/comm/pos_link`（树莓派侧）、`firmware/esp32_pos_rx`（ESP32 侧） |
+| 底层 | WiFi 2.4 GHz（树莓派开热点）+ TCP |
+| 状态 | 树莓派侧已跑通单元测试；ESP32 侧接收固件已入库，**端到端待上板复核** |
 
-本文件是**这一条链路**的完整定义：拓扑、地址、帧、时序、异常处理、双端对账表。
-两边实现有任何一处对不上，现象都是「TCP 连上了，但一帧也解不出来」，
-所以改协议必须同步改 `pos_link/frame.py`、`firmware/esp32_pos_tx/main/main.c`
-和本文件三处。
+> 本协议只管「怎么把一对坐标可靠地送到 ESP32」。坐标怎么算出来、ESP32 收到后
+> 用来干什么，都不在这里规定。改字段 = 同时改 `pos_link/frame.py`、
+> `tools/pos_link_sim.py`、`firmware/esp32_pos_rx/main/main.c` 三处，缺一处必出错。
 
 ---
 
-## 1. 链路拓扑
+## 1. 拓扑与角色
 
 ```
-                     ┌──────────────────────────────┐
-                     │ 树莓派 5                      │
-   ESP32-S3          │  wlan0  192.168.50.1/24  (AP) │
-   (STA) ──WiFi──────┤   ├─ NetworkManager 内置 DHCP │
-                     │   └─ pos_link bridge  :5000   │
-                     │  eth0   192.168.100.1/24      │── 网线 ── 笔记本（调试/SSH 保底通道）
-                     └──────────────────────────────┘
+        树莓派 5                                    ESP32-S3
+ ┌─────────────────────────┐                 ┌───────────────────────┐
+ │ wlan0  192.168.50.1/24  │   WiFi 2.4GHz   │ STA，DHCP 拿 192.168.50.x │
+ │ 热点 SSID: PiLink       │ ◄───────────────┤ SSID/PASS 写死在固件里 │
+ │                         │                 │                       │
+ │ pos_link_bridge         │   TCP :5000     │ tcp_connect()         │
+ │  └ 监听 0.0.0.0:5000 ───┼─────────────────┤ └ 主动连 192.168.50.1 │
+ │                          │  12 字节/帧 1Hz │  └ recv → 校验 → 执行 │
+ └─────────────────────────┘                 └───────────────────────┘
 ```
 
-- **树莓派开热点，ESP32 作客户端**。方向是 ESP32 → 树莓派，TCP 由 ESP32 主动发起。
-- 树莓派**不发起连接、不需要知道 ESP32 的 IP**。ESP32 重启 / DHCP 换地址 / 掉线重连，
-  对树莓派来说都只是「一个客户端断开、一会儿再来一个」。
-- 树莓派此时**没有外网**（默认路由被热点接管）。这不是故障：本链路不需要 NTP、不需要
-  装包、ROS 2 本地通信走 loopback，全都正常。
+**为什么树莓派当服务端**：ESP32 的 IP 是 dnsmasq 分出来的，树莓派事先不知道；
+而树莓派在热点里永远是 `192.168.50.1`。所以让 ESP32 主动连上来，树莓派只管
+记住这条连接往里推。两边都不需要维护对方的地址表。
 
-### 1.1 地址与参数
-
-| 项 | 值 | 在哪改 |
+| 角色 | 谁 | 做什么 |
 |---|---|---|
-| SSID | `PiLink` | `nmcli connection modify PiLink ... ssid` |
-| 密码 | `raspberry123`（WPA2-PSK，CCMP） | 同上 `802-11-wireless-security.psk` |
-| 频段 / 信道 | 2.4 GHz / 信道 6（2437 MHz） | `802-11-wireless.band bg`、`.channel 6` |
-| 树莓派 AP 地址 | `192.168.50.1/24` | `ipv4.addresses` |
-| DHCP 池 | `192.168.50.10 – 192.168.50.254`，租期 60 min | NetworkManager 自动生成 dnsmasq 参数 |
-| TCP 端口 | **5000** | `pos_link.yaml` `listen_port` / 固件 `HOST_PORT` |
-| 发送周期 | **1 Hz**（1000 ms） | 固件 `SEND_PERIOD_MS` |
-| 有线调试网段 | 树莓派 `192.168.100.1/24` ↔ 笔记本 `192.168.100.2/24` | `nmcli connection modify eth0 ...` |
-
-> ★ **必须选 2.4 GHz。** ESP32-S3 只支持 2.4 GHz；hostapd 里写成 `hw_mode=a`（5 GHz）
-> 或 nmcli 写成 `band=a`，ESP32 连 SSID 都搜不到。
+| AP / TCP Server | 树莓派 | 开热点、发 DHCP、监听 5000、按 1 Hz 推帧 |
+| STA / TCP Client | ESP32-S3 | 连热点、连服务端、收帧、校验、执行 |
+| 坐标源 | 上层 ROS 2 节点 | 往 `input_topic` 发 `PointStamped`（本协议不关心） |
 
 ---
 
-## 2. 帧格式
+## 2. 地址与参数
 
-**固定 12 字节，小端。**
+| 项 | 值 | 在哪配 |
+|---|---|---|
+| SSID | `PiLink` | `nmcli` 连接 profile / 固件 `WIFI_SSID` |
+| 密码 | `raspberry123` | 同上 |
+| 信道 | 6（2437 MHz，20 MHz 带宽） | `nmcli` profile `802-11-wireless.channel` |
+| 树莓派地址 | `192.168.50.1/24` | `nmcli` profile `ipv4.addresses` |
+| DHCP 池 | `192.168.50.10 – 192.168.50.254`，租期 60 min | NetworkManager 的 `shared` 模式 |
+| TCP 端口 | **5000** | `config/pos_link.yaml` `listen_port` / 固件 `HOST_PORT` |
+| 下发周期 | 1000 ms | `config/pos_link.yaml` `send_period_ms` |
 
-| 偏移 | 长度 | 字段 | 说明 |
+---
+
+## 3. 传输层约定
+
+- **TCP 长连接**，连上就一直用，断了重连。不搞 UDP：1 Hz 的数据量用不着，
+  而丢一帧坐标就得等下一秒，不如让 TCP 保证「到了就是对的」。
+- `TCP_NODELAY` 打开。每帧才 12 字节，Nagle 攒包只会平白多几十毫秒。
+- 树莓派侧对每个客户端设 1 s 发送超时：某个 ESP32 卡住不能把 ROS 定时器拖住。
+- ESP32 侧设 3 s 接收超时：超时不当断线，只是打印「3 秒没收到帧」继续等——
+  树莓派可能只是暂时没有坐标源。
+- 一个 ESP32 掉线不影响其他连接；树莓派会把它从连接表里摘掉并打一行警告。
+
+---
+
+## 4. 帧格式（12 字节，小端）
+
+| 偏移 | 字节数 | 字段 | 说明 |
 |---|---|---|---|
-| 0 | 2 | 帧头 | 固定 `0xAA 0x55` |
-| 2 | 1 | 类型 | `0x01` = 坐标帧（本版本唯一类型） |
-| 3 | 1 | 序号 | 0–255 循环递增，用于发现丢帧 |
-| 4 | 2 | x | int16，小端 |
-| 6 | 2 | y | int16，小端 |
-| 8 | 2 | CRC16 | CRC-16/CCITT-FALSE，覆盖偏移 0–7（含帧头） |
-| 10 | 2 | 帧尾 | 固定 `0x0D 0x0A` |
+| 0 | 1 | `0xAA` | 帧头 |
+| 1 | 1 | `0x55` | 帧头 |
+| 2 | 1 | 类型 | `0x01` = 坐标帧（预留其它类型） |
+| 3 | 1 | `seq` | 0–255 循环，用来发现丢帧 |
+| 4–5 | 2 | `x` | `int16`，小端 |
+| 6–7 | 2 | `y` | `int16`，小端 |
+| 8–9 | 2 | `crc` | CRC-16/CCITT-FALSE，小端，覆盖 **0–7** |
+| 10 | 1 | `0x0D` | 帧尾 |
+| 11 | 1 | `0x0A` | 帧尾 |
 
-- 坐标单位由应用层自定（当前是厘米级整数，取值 0–999）。
-- int16 范围 −32768…32767，比三位数坐标宽得多，留了余量。
-- 序号只用于**统计**丢帧，不做重传。
+- 坐标单位不做规定（cm / mm 都行），两侧必须一致。当前 G 题场景用 **cm**，
+  场地 480×400 cm，`int16` 远远够用。
+- 超出 `int16` 的值：树莓派侧**先四舍五入再夹到 `[-32768, 32767]`** 并告警，
+  绝不抛异常中断链路。NaN/Inf 直接丢弃。
 
-### 2.1 CRC-16/CCITT-FALSE
+### CRC 参数
 
 | 参数 | 值 |
 |---|---|
-| 多项式 | `0x1021` |
-| 初值 | `0xFFFF` |
-| 输入反射 | 否 |
-| 输出异或 | 否 |
-| 校验范围 | 帧偏移 0–7，共 8 字节 |
+| 算法 | CRC-16/CCITT-FALSE |
+| poly | `0x1021` |
+| init | `0xFFFF` |
+| refin / refout | 否 / 否 |
+| xorout | 无 |
+| 校验向量 | `"123456789"` → `0x29B1` |
 
-**标准自测向量：`crc16_ccitt("123456789") == 0x29B1`。**
-两边实现都对不上这个值，就不用往下查了，先把 CRC 写对。
-
-### 2.2 参考帧（两侧必须逐字节一致）
-
-| 含义 | 字节 |
-|---|---|
-| x=100, y=200, seq=0 | `AA 55 01 00 64 00 C8 00 E5 FC 0D 0A` |
-| x=7, y=3, seq=1 | `AA 55 01 01 07 00 03 00 14 5E 0D 0A` |
-
-这两条已经写成单元测试（`src/comm/pos_link/test/test_frame.py` 的
-`test_build_frame_known_bytes` 和 `test_build_frame_known_bytes_seq1`），
-改协议时测试会先红。
-
----
-
-## 3. 时序
+### 参考帧（三处代码必须一致）
 
 ```
-ESP32                                      树莓派 (bridge)
-  │  WiFi 关联 + DHCP                        │
-  │  ─────────────────────────────────────►  │  dnsmasq 分配 192.168.50.x
-  │                                          │
-  │  TCP SYN ─────────────────────────────►  │  accept()，日志「客户端接入」
-  │  ◄───────────────────────────── SYN/ACK  │
-  │                                          │
-  │  [AA 55 01 00 ... 0D 0A] ─────────────►  │  校验 → publish /esp32/position
-  │            （每 1000 ms 一帧）            │
-  │            ...                           │
-  ✗  断电 / 走出覆盖 / AP 抖动                │
-  │                                          │  1 s watchdog，3 s 无帧告警
-  │  重连（断开后立即重试，失败间隔 1 s）      │  「客户端断开」→「客户端接入」
+x=100, y=200, seq=0 →  AA 55 01 00 64 00 C8 00 E5 FC 0D 0A
+x=7,   y=3,   seq=1 →  AA 55 01 01 07 00 03 00 14 5E 0D 0A
 ```
 
-- **重连策略**：ESP32 收到 `WIFI_EVENT_STA_DISCONNECTED` 后等 1 s 再 `esp_wifi_connect()`；
-  TCP 发不出去就 `close()` 重建。**不要在 WiFi 事件回调里死循环重连** —— 会饿死事件任务。
-- **BSSID / 信道锁定**：ESP32 扫描一次后锁定 AP 的 MAC 和信道，之后跳过扫描（省 ~2.5 s）。
-  连失 5 次会自动解锁、重新扫描 —— 否则热点换了信道，固件会**永远**连不上。
-- **省电**：ESP32 侧 `esp_wifi_set_ps(WIFI_PS_NONE)`。1 Hz 的数据量下省电毫无意义，
-  但省电模式会让 TCP 重传超时变长、延迟抖动变大。
+这两条已经写成单元测试（`test/test_frame.py`），也写在假 ESP32
+（`tools/pos_link_sim.py`）里。改协议忘了改某一处，测试或抓包会立刻露馅。
 
 ---
 
-## 4. 异常处理
+## 5. 时序
 
-| 现象 | 树莓派侧行为 | 说明 |
+```
+树莓派                                       ESP32
+  │  监听 5000                                │
+  │  ◄────────── TCP SYN ──────────────────── │ 上电/重连
+  │  ─────────── SYN-ACK ──────────────────► │
+  │  ◄────────── ACK ──────────────────────── │
+  │                                            │
+  │  ── 帧(seq=0) ──────────────────────────► │ 校验 → on_position()
+  │  ── 帧(seq=1) ──────────────────────────► │   （1000 ms 后）
+  │  ── 帧(seq=2) ──────────────────────────► │
+  │            …… 一直推，直到任一方断开 ……      │
+```
+
+- 树莓派**不等 ACK**，也不重传。TCP 保证顺序与完整性，1 Hz 下丢一帧等于晚一秒，
+  对执行机构来说下一帧就到了，没必要做应用层重传。
+- 树莓派在**没有客户端**时照常运转，只是不打包（省电、少日志噪音）。
+- 树莓派在**没有坐标**时不发帧。ESP32 侧表现为「3 秒没收到帧」告警，连接不断。
+
+---
+
+## 6. 异常处理
+
+| 场景 | 树莓派侧 | ESP32 侧 |
 |---|---|---|
-| 缓冲区出现非帧头字节 | 丢弃，直到下一个 `AA 55` | 上电、重连时 TCP 流里可能混入半帧 |
-| CRC / 帧尾不对 | 丢帧，`_n_bad++`，退 1 字节重找帧头 | 不能整段丢：假帧头后面可能紧跟真帧 |
-| 序号不连续 | `_n_gap++`，照常发布 | 只统计，不重传 |
-| 3 s 无帧 | WARN 日志（5 s 节流），打印总帧/坏帧/跳变 | 不退出，等重连 |
-| 端口被占 | 启动即报 `OSError: [Errno 98] Address already in use` | 先 `pkill -f bridge` 再重启服务 |
-
-### 4.1 已知坑（都踩过）
-
-1. **`WIFI_REASON_NO_AP_FOUND_IN_AUTHMODE_THRESHOLD`（211）** —— ESP32 找到了 AP，
-   但它的安全等级被判定为低于固件设的门槛。本次根因：NetworkManager 生成的 AP 同时通告
-   WPA(v1) 和 WPA2，ESP32 把该热点归为 `WPA_PSK`（`auth=2`），而固件门槛被设成
-   `WPA2_PSK`。**修法**：固件 `threshold.authmode = WIFI_AUTH_WPA_PSK`，同时把 AP 的
-   组播/单播加密都改成 CCMP。
-   > 注意：`WIFI_AUTH_OPEN` **不管用** —— 密码 ≥8 位时 ESP-IDF 会静默把 OPEN 门槛
-   > 提升成 WPA2，日志里能看到 `authmode threshold changes from OPEN to WPA2`。
-2. **Windows 上 `ping` 不通但 SSH 通** —— 代理软件的 TUN 虚拟网卡会拦截 ICMP。
-   用 `Test-NetConnection <ip> -Port 22` 判断连通性。
-3. **开热点不需要 `hostapd`** —— NetworkManager 1.46 + `dnsmasq-base` 就够了；
-   装了 hostapd 反而有被误启动、抢走 wlan0 的风险。
+| ESP32 掉电/重启 | `sendall` 抛错 → 摘掉该连接，打警告 | 上电后重新 `tcp_connect()` |
+| 树莓派进程重启 | — | `recv` 返回 0 → 关 socket，1 s 后重连 |
+| 树莓派没有坐标源 | 每 10 s 打「还没有坐标，暂不发送」 | 3 s 后打「3 秒没收到帧」 |
+| 坐标过期（源卡住） | 默认继续发最后值 + 告警（`hold_last_on_stale`） | 无感（照收） |
+| 帧校验失败 | — | 计坏帧数，丢弃，继续找下一个 `AA 55` |
+| 字节流错位 | — | 逐字节状态机重新同步，不整段丢弃 |
+| 端口被占用 | 启动即报 `端口 5000 绑定失败` | 连不上，2 s 后重试 |
+| ESP32 连上了但收不到 | 检查是否「还没有坐标」 | 检查 `input_topic` 有没有人发 |
 
 ---
 
-## 5. 双端对账表
+## 7. 踩过的坑
 
-改协议时逐行核对，任何一行不一致都会表现为「连上但不解帧」。
+### 7.1 `reason=211`（`NO_AP_FOUND_IN_AUTHMODE_THRESHOLD`）
 
-| 参数 | 树莓派 | ESP32-S3 |
+ESP32 明明能扫到 `PiLink`（`rssi=-24`），却连不上、每 3.4 秒报一次
+`WIFI_REASON_NO_AP_FOUND_IN_AUTHMODE_THRESHOLD`，全程没有一次 `init -> auth`。
+
+根因不在信号、不在信道、不在密码：
+
+1. NetworkManager 生成的 AP 同时通告 WPA(v1) 与 WPA2 的 IE。
+2. 默认组播/单播加密是 **TKIP**，ESP32 扫描结果里把该热点归为
+   `auth=2(WPA_PSK)`、`pair=5(TKIP+CCMP)`、`group=3(TKIP)`。
+3. 固件门槛是 `WIFI_AUTH_WPA2_PSK` → 该热点被筛掉 → 211。
+
+更阴的是：把门槛写成 `WIFI_AUTH_OPEN` **也没用**——密码 ≥ 8 位时 IDF 会自动
+把门槛提升到 WPA2，日志里只有一句
+`Password length matches WPA2 standards, authmode threshold changes from OPEN to WPA2`。
+
+正解（两侧都做）：
+- 固件：`threshold.authmode = WIFI_AUTH_WPA_PSK`（显式写 WPA_PSK 不会被自动提升）。
+- 热点：`nmcli connection modify PiLink 802-11-wireless-security.group ccmp`
+  + `802-11-wireless-security.pairwise ccmp`，把 TKIP 去掉。
+
+即使改完 CCMP，ESP32 仍把该热点报成 `auth=2(WPA_PSK)`（wpa_supplicant 的 AP 模式
+多带了一个 WPA(v1) IE）。**所以门槛必须留在 `WPA_PSK`，改回 WPA2 会立刻复发 211。**
+
+### 7.2 BSSID 写死会锁死自己
+
+固件开机扫描一次、记住「信道 + BSSID」，之后不再扫，省下每次开机 2~3 秒。
+副作用：热点要是换了信道或重建了，旧 BSSID 就永远连不上。
+所以固件里加了 **连失 5 次自动解锁**，改回按 SSID 重新扫描。
+
+### 7.3 `Address already in use`
+
+手动跑过一个 bridge，再 `systemctl start pos-link` 就 `[Errno 98]`，然后 5 秒一重启。
+`pkill -f 'pos_link.*bridge'` → `ss -ltnp | grep ':5000'` 确认空 → 再启动。
+
+---
+
+## 8. 双端对账表
+
+改协议时逐行对，两边必须一致：
+
+| 字段 | 树莓派侧 | ESP32 侧 |
 |---|---|---|
-| 帧长 | `FRAME_LEN = 12` | `FRAME_LEN 12` |
-| 帧头 | `HEAD = b"\xAA\x55"` | `0xAA, 0x55` |
-| 帧尾 | `TAIL = b"\x0D\x0A"` | `0x0D, 0x0A` |
-| 类型 | `TYPE_POS = 0x01` | `TYPE_POS 0x01` |
-| 坐标字节序 | `struct.unpack_from("<hh", ...)` | `x & 0xFF, (x >> 8) & 0xFF` |
-| CRC | `crc16_ccitt(f[0:8])` | `crc16_ccitt(f, 8)` |
-| 端口 | `listen_port: 5000` | `HOST_PORT 5000` |
-| 对端地址 | 不关心（只听） | `HOST_IP "192.168.50.1"` |
-| 周期 | — | `SEND_PERIOD_MS 1000` |
+| 帧头 | `frame.HEAD = b"\xAA\x55"` | `FRAME_HEAD0/1` |
+| 帧尾 | `frame.TAIL = b"\x0D\x0A"` | `FRAME_TAIL0/1` |
+| 类型 | `TYPE_POS = 0x01` | `TYPE_POS` |
+| 长度 | `FRAME_LEN = 12` | `FRAME_LEN 12` |
+| 序号 | `build_frame(x, y, seq)` 的 `seq & 0xFF` | `f[3]` |
+| 坐标 | `struct.pack("<BBhh", …)` | `f[4] \| f[5]<<8`（int16） |
+| CRC | `crc16_ccitt(body)` | `crc16_ccitt(f, 8)` |
+| 端口 | `listen_port` 默认 5000 | `HOST_PORT 5000` |
+| 对端地址 | 监听 `0.0.0.0` | `HOST_IP "192.168.50.1"` |
 
 ---
 
-## 6. 实测数据
+## 9. 怎么验证
 
-真机（树莓派 5 内置 WiFi + ESP32-S3）跑通后的记录：
-
-- WiFi 关联：`rssi ≈ −33 dBm`，`channel 6`，`BW20`，`auth = WPA2-PSK`。
-- ESP32 侧首次连接：第 1 次 `ASSOC_FAIL(203)`、第 2 次 `CONNECTION_FAIL(205)`、
-  第 3 次成功 —— 上电时 AP 偶尔还没准备好，重试逻辑有效。
-- 发送：`1 Hz`，`ros2 topic hz /esp32/position` 实测 **1.000 Hz**，
-  std dev ≈ 0.02 s，min 0.960 s / max 1.040 s。
-- 长时间运行：`累计` 计数每次日志 +5（日志 5 s 节流），即 **无丢帧**。
-- 桥接进程重启后 ESP32 **自动重连**，无需人工干预。
-
----
-
-## 7. 变更记录
-
-| 版本 | 日期 | 内容 |
+| 层次 | 做法 | 期望 |
 |---|---|---|
-| v1.0 | 2026-11 | 首次定稿：12 字节定长帧 + CRC16，5000 端口，1 Hz；记录 211 坑与双端对账表 |
+| 编解码 | `pytest test -q`（不需要 ROS/硬件） | 全绿 |
+| 服务端在发 | `ros2 topic pub -r 1 /pos_link/target …` + `tools/pos_link_sim.py --host 127.0.0.1` | 假 ESP32 每秒打印一行帧 |
+| 真板子收 | 串口 monitor | `已连接 192.168.50.1:5000` → `收到 seq=.. x=.. y=..` |
+| 序号连续 | 看串口 `seq` 或假 ESP32 的统计 | 连续递增（模 256），跳过说明丢帧 |
+| 频率 | `ros2 topic hz`（在坐标源上）对比串口 | 应同为 1 Hz |
+
+**尚未实测**：ESP32 侧端到端时延（树莓派 `sendall` 到 ESP32 `recv` 返回）。
+上板后建议在两侧各打一次 `esp_timer_get_time()` 对比，或看串口相邻两帧间隔的
+抖动（应为 1000 ms ± 几十 ms）。上一版（反方向）在这条链路上实测过 1.000 Hz、
+std ≈ 0.02 s，可作为参考，但**不能直接当成本版的数据**。
+
+---
+
+## 10. 变更记录
+
+| 版本 | 日期 | 变更 |
+|---|---|---|
+| v1.0 | 2026-11 | 首版。**方向为树莓派 → ESP32**：树莓派算坐标、打包、1 Hz 下发；ESP32 接收后执行。 |
+
+> 归档时的早期版本（`v3.2.0` 那次提交）方向写反了（ESP32 → 树莓派），
+> 本版已按项目实际需求改正：坐标由树莓派产生并下发，ESP32 只做执行端。

@@ -1,8 +1,11 @@
 /*
- * ESP32-S3 坐标发送端
+ * ESP32-S3 坐标接收端
  *
- * 功能：连上树莓派开的 2.4GHz 热点 PiLink，建立 TCP 连接，
- *       每 1 秒发送一个 12 字节坐标帧（带帧头/帧尾/CRC16）。
+ * 职责：连上树莓派开的 2.4GHz 热点 PiLink，主动连树莓派的 TCP 5000 端口，
+ *       然后**收** 12 字节坐标帧（帧头/类型/序号/x/y/CRC16/帧尾），
+ *       校验通过就交给 on_position() 去驱动执行机构。
+ *
+ * 本固件不发送任何数据。坐标由树莓派算、树莓派发，这里只当执行端。
  *
  * 帧格式（12 字节，小端）：
  *   [0]  0xAA         帧头
@@ -19,12 +22,12 @@
  *   [11] 0x0A         帧尾
  */
 
-#include <string.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
-#include <unistd.h>
-#include <sys/time.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -40,15 +43,24 @@
 #include "lwip/sockets.h"
 #include "lwip/netdb.h"
 
-/* ============ 需要你改的 5 个参数 ============ */
+/* ============ 需要你改的 4 个参数 ============ */
 #define WIFI_SSID       "PiLink"        /* 树莓派热点名 */
 #define WIFI_PASS       "raspberry123"  /* 树莓派热点密码 */
-#define HOST_IP         "192.168.50.1"  /* 树莓派在热点里的地址 */
-#define HOST_PORT       5000            /* 桥接节点监听的端口 */
-#define SEND_PERIOD_MS  1000            /* 发送周期，1Hz */
+#define HOST_IP         "192.168.50.1"  /* 树莓派在热点里的固定地址 */
+#define HOST_PORT       5000            /* 树莓派 pos_link 桥接端口 */
 /* ============================================ */
 
-static const char *TAG = "pos_tx";
+#define RECV_TIMEOUT_S  3               /* 超过这么久没收到字节就告警一次 */
+
+/* 帧定义：改这里必须同步改 src/comm/pos_link/pos_link/frame.py */
+#define FRAME_LEN       12
+#define FRAME_HEAD0     0xAA
+#define FRAME_HEAD1     0x55
+#define FRAME_TAIL0     0x0D
+#define FRAME_TAIL1     0x0A
+#define TYPE_POS        0x01
+
+static const char *TAG = "pos_rx";
 
 /* WiFi 是否已连上并拿到 IP，用事件组做同步 */
 static EventGroupHandle_t s_wifi_evt;
@@ -59,10 +71,9 @@ static wifi_config_t s_wc;
 static bool s_bssid_locked = false;   /* 当前是否锁定了某个 AP 的 BSSID */
 static int  s_fail_cnt      = 0;      /* 连续失败次数 */
 
-/* 演示用的坐标，每次发送前自增一点，方便你在 ROS 里看到变化 */
-static int16_t s_x = 0;
-static int16_t s_y = 0;
-static uint8_t s_seq = 0;
+/* 接收统计，排障时看这两个数 */
+static uint32_t s_rx_frames = 0;
+static uint32_t s_rx_bad    = 0;
 
 /* ---------- CRC16-CCITT-FALSE：poly 0x1021, init 0xFFFF ---------- */
 static uint16_t crc16_ccitt(const uint8_t *data, size_t len)
@@ -81,23 +92,147 @@ static uint16_t crc16_ccitt(const uint8_t *data, size_t len)
     return crc;
 }
 
-/* ---------- 按协议拼一个 12 字节帧 ---------- */
-static void build_frame(uint8_t *f, int16_t x, int16_t y)
+/* ---------- 校验并拆一帧，失败返回 false ---------- */
+static bool parse_frame(const uint8_t *f, uint8_t *seq, int16_t *x, int16_t *y)
 {
-    f[0] = 0xAA;
-    f[1] = 0x55;
-    f[2] = 0x01;
-    f[3] = s_seq++;
-    f[4] = (uint8_t)(x & 0xFF);
-    f[5] = (uint8_t)((x >> 8) & 0xFF);
-    f[6] = (uint8_t)(y & 0xFF);
-    f[7] = (uint8_t)((y >> 8) & 0xFF);
+    if (f[0] != FRAME_HEAD0 || f[1] != FRAME_HEAD1) return false;
+    if (f[2] != TYPE_POS)                           return false;
+    if (f[10] != FRAME_TAIL0 || f[11] != FRAME_TAIL1) return false;
 
-    uint16_t crc = crc16_ccitt(f, 8);          /* 只算前 8 字节 */
-    f[8]  = (uint8_t)(crc & 0xFF);
-    f[9]  = (uint8_t)((crc >> 8) & 0xFF);
-    f[10] = 0x0D;
-    f[11] = 0x0A;
+    uint16_t crc_rx = (uint16_t)(f[8] | ((uint16_t)f[9] << 8));
+    if (crc16_ccitt(f, 8) != crc_rx) return false;
+
+    *seq = f[3];
+    *x   = (int16_t)((uint16_t)f[4] | ((uint16_t)f[5] << 8));
+    *y   = (int16_t)((uint16_t)f[6] | ((uint16_t)f[7] << 8));
+    return true;
+}
+
+/* ------------------------------------------------------------------ *
+ *  ★★ 坐标到手的地方 —— 你要接执行机构就改这个函数 ★★
+ *
+ *  现在只打日志。实际用的时候把下面的内容换成你的动作：
+ *    - 驱动电机/舵机：算差分、限幅、写 PWM
+ *    - 转给另一颗 MCU：UART 转发、再打包
+ *    - 存起来等条件触发（比如「x>300 才动」）
+ *
+ *  注意：这是 TCP 任务上下文，不是中断，可以调 vTaskDelay 之外的普通 API；
+ *  但别在这里做耗时超过几十毫秒的事，否则会拖慢收帧（1 帧/秒，缓冲很浅）。
+ * ------------------------------------------------------------------ */
+static void on_position(uint8_t seq, int16_t x, int16_t y)
+{
+    ESP_LOGI(TAG, "收到 seq=%u x=%d y=%d", seq, x, y);
+}
+
+/* ---------- 读一个字节：1=读到, 0=超时, -1=连接断了 ---------- */
+static int recv_byte(int sock, uint8_t *b)
+{
+    int n = recv(sock, b, 1, 0);
+    if (n == 1) {
+        return 1;
+    }
+    if (n < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            return 0;          /* 超时，不是错误 */
+        }
+        return -1;
+    }
+    return -1;                 /* n == 0：对端关了连接 */
+}
+
+/* ------------------------------------------------------------------ *
+ *  读满一帧。返回：
+ *    1 = 好帧（已回调 on_position）
+ *    2 = 帧读到了但校验失败（计坏帧，继续）
+ *    0 = 一直没等到帧头（RECV_TIMEOUT_S 内无字节）
+ *   -1 = 连接断开
+ *
+ *  为什么逐字节找帧头：TCP 是字节流，一次 recv 可能给半帧、也可能给三帧
+ *  加半截垃圾。逐字节做状态机最笨也最不容易错，1 Hz × 12 字节的开销
+ *  完全可以忽略。
+ * ------------------------------------------------------------------ */
+static int read_frame(int sock, uint8_t f[FRAME_LEN])
+{
+    int got = 0;
+
+    while (got < FRAME_LEN) {
+        uint8_t b;
+        int r = recv_byte(sock, &b);
+        if (r < 0) {
+            return -1;
+        }
+        if (r == 0) {
+            if (got == 0) {
+                return 0;      /* 还没开始一帧：树莓派可能暂时没有坐标 */
+            }
+            got = 0;           /* 半帧断流：丢掉重来 */
+            continue;
+        }
+
+        if (got == 0) {
+            if (b != FRAME_HEAD0) {
+                continue;
+            }
+        } else if (got == 1) {
+            if (b != FRAME_HEAD1) {
+                /* 不是 0x55：如果又是 0xAA，就当新的帧头起点 */
+                if (b == FRAME_HEAD0) {
+                    f[0] = FRAME_HEAD0;
+                    got  = 1;
+                } else {
+                    got = 0;
+                }
+                continue;
+            }
+        }
+        f[got++] = b;
+    }
+
+    uint8_t seq;
+    int16_t x, y;
+    if (!parse_frame(f, &seq, &x, &y)) {
+        s_rx_bad++;
+        ESP_LOGW(TAG, "帧校验失败（累计坏帧 %u），丢弃后重新找帧头", s_rx_bad);
+        return 2;
+    }
+
+    s_rx_frames++;
+    on_position(seq, x, y);
+    return 1;
+}
+
+/* ---------- 建立 TCP 连接，失败返回 -1 ---------- */
+static int tcp_connect(void)
+{
+    int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (sock < 0) {
+        ESP_LOGE(TAG, "socket() 失败, errno=%d", errno);
+        return -1;
+    }
+
+    /* 接收超时 3 秒：对端不发数据时 recv() 不会永久阻塞，
+       这样"树莓派没坐标源"能变成一条告警而不是卡死 */
+    struct timeval tv = { .tv_sec = RECV_TIMEOUT_S, .tv_usec = 0 };
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    /* 关掉 Nagle：对面每次就发 12 字节，攒包只会平白加延迟 */
+    int nodelay = 1;
+    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+
+    struct sockaddr_in dest = { 0 };
+    dest.sin_family      = AF_INET;
+    dest.sin_port        = htons(HOST_PORT);
+    dest.sin_addr.s_addr = inet_addr(HOST_IP);
+
+    if (connect(sock, (struct sockaddr *)&dest, sizeof(dest)) != 0) {
+        ESP_LOGW(TAG, "连接 %s:%d 失败, errno=%d（树莓派上的 bridge 起了吗？）",
+                 HOST_IP, HOST_PORT, errno);
+        close(sock);
+        return -1;
+    }
+
+    ESP_LOGI(TAG, "TCP 已连接 %s:%d，开始等坐标帧", HOST_IP, HOST_PORT);
+    return sock;
 }
 
 /* ---------- WiFi / IP 事件回调 ---------- */
@@ -135,38 +270,6 @@ static void event_handler(void *arg, esp_event_base_t base,
         s_fail_cnt = 0;
         xEventGroupSetBits(s_wifi_evt, WIFI_CONNECTED_BIT);
     }
-}
-
-/* ---------- 建立 TCP 连接，失败返回 -1 ---------- */
-static int tcp_connect(void)
-{
-    int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (sock < 0) {
-        ESP_LOGE(TAG, "socket() 失败, errno=%d", errno);
-        return -1;
-    }
-
-    /* 发送超时 3 秒：对端卡死时 send() 不会永久阻塞 */
-    struct timeval tv = { .tv_sec = 3, .tv_usec = 0 };
-    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-
-    /* 关掉 Nagle：每帧都是小包，攒包只会增加延迟 */
-    int nodelay = 1;
-    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
-
-    struct sockaddr_in dest = { 0 };
-    dest.sin_family      = AF_INET;
-    dest.sin_port        = htons(HOST_PORT);
-    dest.sin_addr.s_addr = inet_addr(HOST_IP);
-
-    if (connect(sock, (struct sockaddr *)&dest, sizeof(dest)) != 0) {
-        ESP_LOGE(TAG, "连接 %s:%d 失败, errno=%d", HOST_IP, HOST_PORT, errno);
-        close(sock);
-        return -1;
-    }
-
-    ESP_LOGI(TAG, "TCP 已连接 %s:%d", HOST_IP, HOST_PORT);
-    return sock;
 }
 
 /* ---------- 调试用：扫描并打印周围所有 AP ---------- */
@@ -262,8 +365,8 @@ void app_main(void)
     /* 门槛说明（踩过的坑）：
        1) 写 WIFI_AUTH_OPEN 没用——密码 ≥8 位时 IDF 会自动把门槛提到 WPA2，
           日志会打 "authmode threshold changes from OPEN to WPA2"；
-       2) 树莓派那个热点因为 group cipher 是 TKIP，被扫成 WPA_PSK(WPA1)，
-          低于 WPA2 门槛就被筛掉，报 reason=211。
+       2) 树莓派那个热点会被扫成 WPA_PSK(WPA1)，高于 WPA2 的门槛会把它筛掉，
+          表现为 reason=211（NO_AP_FOUND_IN_AUTHMODE_THRESHOLD）。
        所以这里显式写 WPA_PSK，让 WPA1/WPA2 都能过。 */
     s_wc.sta.threshold.authmode = WIFI_AUTH_WPA_PSK;
 
@@ -296,9 +399,9 @@ void app_main(void)
     ESP_LOGI(TAG, "开始连接 %s ...", WIFI_SSID);
     esp_wifi_connect();
 
-    /* 9. 主循环：连上 -> 发帧 -> 断了重连 */
+    /* 9. 主循环：连上 → 收帧 → 断了重连。本固件不发任何数据。 */
     int sock = -1;
-    uint8_t frame[12];
+    uint8_t frame[FRAME_LEN];
 
     while (1) {
         if (sock < 0) {
@@ -312,21 +415,19 @@ void app_main(void)
             }
         }
 
-        /* 生成坐标：真实项目里换成你的传感器/算法输出 */
-        s_x = (int16_t)((s_x + 7) % 1000);
-        s_y = (int16_t)((s_y + 3) % 1000);
-
-        build_frame(frame, s_x, s_y);
-
-        int n = send(sock, frame, sizeof(frame), 0);
-        if (n != (int)sizeof(frame)) {
-            ESP_LOGW(TAG, "send 失败 n=%d errno=%d，关闭重连", n, errno);
+        int r = read_frame(sock, frame);
+        if (r < 0) {
+            ESP_LOGW(TAG, "TCP 断开，1 秒后重连（累计好帧 %u / 坏帧 %u）",
+                     s_rx_frames, s_rx_bad);
             close(sock);
             sock = -1;
+            vTaskDelay(pdMS_TO_TICKS(1000));
             continue;
         }
-
-        ESP_LOGI(TAG, "已发送 seq=%u x=%d y=%d", frame[3], s_x, s_y);
-        vTaskDelay(pdMS_TO_TICKS(SEND_PERIOD_MS));
+        if (r == 0) {
+            /* 3 秒一个字节都没来：树莓派那边可能还没坐标源，或 bridge 没起 */
+            ESP_LOGW(TAG, "%d 秒没收到帧（累计好帧 %u / 坏帧 %u）",
+                     RECV_TIMEOUT_S, s_rx_frames, s_rx_bad);
+        }
     }
 }

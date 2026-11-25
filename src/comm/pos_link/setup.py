@@ -7,7 +7,7 @@ package_name = "pos_link"
 
 setup(
     name=package_name,
-    version="1.0.0",
+    version="1.1.0",
     packages=[package_name],
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),

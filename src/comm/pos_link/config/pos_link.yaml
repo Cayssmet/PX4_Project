@@ -1,12 +1,23 @@
-# pos_link 桥接节点参数。
+# pos_link 桥接节点参数
 #
-# 节点名必须写成 wifi_bridge —— 那是 bridge_node.py 里 super().__init__("wifi_bridge")
-# 定死的；改这里不会改节点名，只会让参数对不上、悄悄用上默认值。
-wifi_bridge:
+# ★ 节点名 pos_link_bridge 是代码里定死的（bridge_node.py 的 Node 构造参数），
+#   这里改名了就加载不上，会静默用默认值——排查时最容易忽略的一处。
+pos_link_bridge:
   ros__parameters:
-    # 和固件里的 HOST_PORT 必须一致，否则 ESP32 连上来立刻被 RST。
+    # 树莓派在热点里的固定地址 192.168.50.1，端口必须和固件 HOST_PORT 一致
     listen_port: 5000
-    # 只是个标签：本系统没有 base_link，不参与 TF 变换。
-    frame_id: esp32
-    # 超过这么多秒没收到帧就告警（ESP32 1 Hz 发帧，3 s 等于连丢 3 帧）。
-    timeout_s: 3.0
+
+    # ★ 坐标从哪来：订阅这个话题（geometry_msgs/PointStamped）。
+    #   谁来发都行：定位节点、任务节点、或者手敲 ros2 topic pub 测试。
+    input_topic: "/pos_link/target"
+
+    # 下发周期（毫秒）。ESP32 侧不做重发，频率由这里说了算。
+    send_period_ms: 1000
+
+    # 坐标源断了怎么办：
+    #   true  = 继续下发最后一次值（保持位置，推荐）
+    #   false = 干脆不发（ESP32 那边会看到链路沉默）
+    hold_last_on_stale: true
+
+    # 超过这么多秒没新坐标就告警
+    stale_warn_s: 5.0
