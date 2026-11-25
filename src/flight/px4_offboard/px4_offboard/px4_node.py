@@ -39,6 +39,7 @@ from std_msgs.msg import Header
 from uav_interfaces.msg import FlightStatus
 
 from . import mavlink_codec as mc
+from . import frames
 
 
 # 需要定时点名的消息：msgid -> 参数名后缀
@@ -68,6 +69,21 @@ class Px4Node(Node):
         self.declare_parameter("reconnect_interval_ms", 2000)
         self.declare_parameter("print_status", True)
 
+        # ---------------- 第二阶段：上行（默认关闭）----------------
+        # ★ 默认关闭是安全设计。打开后本节点会真的往飞控写东西：
+        #   ① VISION_POSITION_ESTIMATE → 进 EKF2，会把位置原点重锚到我们发的坐标上；
+        #   ② SET_POSITION_TARGET_LOCAL_NED → 就是 offboard 的设定点流本身（没有额外心跳消息）。
+        #   地面验证时务必拆桨，且先只开①、确认 cs_ev_pos 翻 true 之后再加②。
+        self.declare_parameter("enable_uplink", False)
+        self.declare_parameter("send_vision_position", True)
+        self.declare_parameter("send_setpoint", True)
+        self.declare_parameter("vision_position_estimate_hz", 30.0)
+        self.declare_parameter("setpoint_hz", 10.0)
+        self.declare_parameter("pose_topic", "/map/current_pose")
+        self.declare_parameter("cmd_vel_topic", "/pid/cmd_vel")
+        self.declare_parameter("pose_timeout_ms", 300.0)
+        self.declare_parameter("cmd_vel_timeout_ms", 300.0)
+
         p = self.get_parameter
         self._dev = p("serial_device").value
         self._baud = int(p("baud").value)
@@ -83,6 +99,16 @@ class Px4Node(Node):
                 self._poll_interval[msgid] = 1.0 / hz
         self._heartbeat_interval = (1.0 / float(p("heartbeat_hz").value)
                                     if float(p("heartbeat_hz").value) > 0 else 0.0)
+
+        self._enable_uplink = bool(p("enable_uplink").value)
+        self._want_pose = bool(p("send_vision_position").value)
+        self._want_sp = bool(p("send_setpoint").value)
+        self._vpe_interval = (1.0 / float(p("vision_position_estimate_hz").value)
+                              if float(p("vision_position_estimate_hz").value) > 0 else 0.0)
+        self._sp_interval = (1.0 / float(p("setpoint_hz").value)
+                             if float(p("setpoint_hz").value) > 0 else 0.0)
+        self._pose_timeout_s = float(p("pose_timeout_ms").value) / 1000.0
+        self._cmd_vel_timeout_s = float(p("cmd_vel_timeout_ms").value) / 1000.0
 
         # ---------------- 状态 ----------------
         self._lock = threading.Lock()
@@ -101,6 +127,15 @@ class Px4Node(Node):
         self._bytes_out = 0
         self._acks = 0
         self._texts = []
+        # 上行缓存（由 ROS 回调写入，串口线程读走）
+        self._pose = None            # (px, py, pz, qw, qx, qy, qz)  —— map(ENU/FLU) 原始值
+        self._pose_t = 0.0
+        self._sp = None              # (vx, vy, vz, yaw_rate)        —— map(ENU) 世界系速度
+        self._sp_t = 0.0
+        self._vpe_sent = 0
+        self._sp_sent = 0
+        self._next_vpe = 0.0
+        self._next_sp = 0.0
 
         # ---------------- ROS 接口 ----------------
         self._status_pub = self.create_publisher(FlightStatus, "/flight/status", 10)
@@ -110,6 +145,21 @@ class Px4Node(Node):
         qos.reliability = ReliabilityPolicy.BEST_EFFORT
         qos.durability = DurabilityPolicy.VOLATILE
         qos.history = HistoryPolicy.KEEP_LAST
+
+        if self._enable_uplink:
+            from geometry_msgs.msg import PoseStamped, TwistStamped
+            self.create_subscription(
+                PoseStamped, str(p("pose_topic").value), self._on_pose, 10)
+            self.create_subscription(
+                TwistStamped, str(p("cmd_vel_topic").value), self._on_cmd_vel, 10)
+            self.get_logger().warn(
+                "★ 上行已启用（enable_uplink=true）：本节点会向飞控发送"
+                f"{' VISION_POSITION_ESTIMATE' if self._want_pose else ''}"
+                f"{' SET_POSITION_TARGET_LOCAL_NED' if self._want_sp else ''}"
+                "。地面验证请拆桨；视觉位姿会把 EKF2 位置原点重锚到它上面。")
+        else:
+            self.get_logger().info(
+                "上行未启用（enable_uplink=false）：本节点只读，不发任何控制量。")
 
         self._thread = threading.Thread(target=self._io_loop, daemon=True)
         self._thread.start()
@@ -223,6 +273,13 @@ class Px4Node(Node):
                         continue
                     self._dispatch(msgid, payload)
 
+            # ---- 上行（只在 enable_uplink 时执行）----
+            if self._enable_uplink:
+                try:
+                    self._uplink_tick(ser, enc, now)
+                except Exception as exc:  # noqa: BLE001
+                    self.get_logger().warn(f"上行发送失败（已跳过本拍）：{exc}")
+
         if ser is not None:
             try:
                 ser.close()
@@ -233,6 +290,49 @@ class Px4Node(Node):
         ser.write(data)
         with self._lock:
             self._bytes_out += len(data)
+
+    # ------------------------------------------------------------------
+    # 上行发送
+    # ------------------------------------------------------------------
+
+    def _uplink_tick(self, ser, enc, now: float):
+        """按频率把缓存里的 ROS 数据翻成 MAVLink 发出去。
+
+        两条铁律：
+        ① **数据过期就停发**，绝不发旧值、更不发 0 —— 让飞控自己进 failsafe
+           比喂它一个错的位姿安全得多。
+        ② 坐标换算只在这里做一次（`frames` 四法则），上游全是 ROS 的 ENU/FLU。
+        """
+        with self._lock:
+            pose, pose_t = self._pose, self._pose_t
+            sp, sp_t = self._sp, self._sp_t
+
+        if self._want_pose and self._vpe_interval > 0.0 and pose is not None:
+            if (now - pose_t) <= self._pose_timeout_s and now >= self._next_vpe:
+                px, py, pz, qw, qx, qy, qz = pose
+                x, y, z = frames.map_position_to_px4((px, py, pz))
+                q_px4 = frames.map_attitude_to_px4(
+                    frames.quaternion_normalized((qw, qx, qy, qz)))
+                roll, pitch, yaw = frames.quaternion_to_euler(q_px4)
+                usec = int(self.get_clock().now().nanoseconds / 1000)
+                self._write(ser, enc.vision_position_estimate(
+                    usec, x, y, z, roll, pitch, yaw))
+                self._next_vpe = now + self._vpe_interval
+                self._vpe_sent += 1
+
+        if self._want_sp and self._sp_interval > 0.0 and sp is not None:
+            if (now - sp_t) <= self._cmd_vel_timeout_s and now >= self._next_sp:
+                vx, vy, vz, yaw_rate = sp
+                vn, ve, vd = frames.map_velocity_to_px4((vx, vy, vz))
+                yr = frames.map_yaw_rate_to_px4(yaw_rate)
+                # 只控速度与偏航角速度：位置/加速度/推力/偏航角全部忽略
+                mask = (mc.POS_IGNORE | mc.ACC_IGNORE
+                        | mc.FORCE_IGNORE | mc.YAW_IGNORE)
+                t_ms = int(now * 1000.0) & 0xFFFFFFFF
+                self._write(ser, enc.set_position_target_local_ned(
+                    t_ms, vx=vn, vy=ve, vz=vd, yaw_rate=yr, type_mask=mask))
+                self._next_sp = now + self._sp_interval
+                self._sp_sent += 1
 
     def _dispatch(self, msgid: int, payload: bytes):
         now = time.monotonic()
@@ -268,6 +368,25 @@ class Px4Node(Node):
                     self._texts.append(txt["text"])
                     del self._texts[:-5]
                     self.get_logger().warn(f"[飞控] {txt['text']}")
+
+    # ------------------------------------------------------------------
+    # 上行：ROS 回调（只缓存，不发串口 —— 串口只在 _io_loop 里写）
+    # ------------------------------------------------------------------
+
+    def _on_pose(self, msg):
+        q = msg.pose.orientation
+        with self._lock:
+            self._pose = (float(msg.pose.position.x), float(msg.pose.position.y),
+                          float(msg.pose.position.z),
+                          float(q.w), float(q.x), float(q.y), float(q.z))
+            self._pose_t = time.monotonic()
+
+    def _on_cmd_vel(self, msg):
+        t = msg.twist
+        with self._lock:
+            self._sp = (float(t.linear.x), float(t.linear.y), float(t.linear.z),
+                        float(t.angular.z))
+            self._sp_t = time.monotonic()
 
     # ------------------------------------------------------------------
     # 发布
