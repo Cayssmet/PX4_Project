@@ -1,3 +1,7 @@
-# 目标芯片：ESP32-S3（只支持 2.4 GHz WiFi）
-# sdkconfig 本身不入库（见 .gitignore），首次编译会由本文件生成
+# pos_link ESP32-S3 receiver -- default config
+#
+# Target chip: ESP32-S3 (2.4 GHz WiFi only).
+# sdkconfig is git-ignored and regenerated on first configure; this file only
+# seeds that first configure, so the project never falls back to the ESP32
+# default target (which builds a binary the S3 refuses to boot).
 CONFIG_IDF_TARGET="esp32s3"

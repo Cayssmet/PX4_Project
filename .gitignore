@@ -41,3 +41,14 @@ Thumbs.db
 
 # 本地 Python 依赖（由 tools/mavlink_usb_udp_bridge.py 使用，不入库）
 tools/.pylibs/
+
+# ---------- ESP-IDF 构建产物（firmware/ 下的工程）----------
+# sdkconfig 与 .clangd 是本机生成的，含路径/芯片配置，不同机器必须各自生成；
+# 只提交 sdkconfig.defaults（上面 build/ 规则已覆盖 firmware/*/build/）。
+firmware/**/sdkconfig
+firmware/**/sdkconfig.old
+firmware/**/.clangd
+firmware/**/managed_components/
+firmware/**/dependencies.lock
+firmware/**/compile_commands.json
+firmware/**/*.bin
