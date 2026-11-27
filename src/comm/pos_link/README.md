@@ -47,7 +47,7 @@ python3 tools/pos_link_sim.py --host 127.0.0.1   # 就在本机连
 |---|---|
 | 树莓派上的源码 | **`~/ros2_ws/src/comm/pos_link`**（与仓库同路径，逐字节一致） |
 | 构建产物 | `~/ros2_ws/{build,install}/pos_link` |
-| 早期验证用的旧工作区 | `/home/ljz/px4_ws`（**已废弃**，别再 `colcon build` 它） |
+| 早期验证用的旧工作区 | `/home/ljz/px4_ws` —— **已于 2026-11-27 删除**（迁移核对通过后清理，旧的 `bridge` 进程也一并关掉，5000 端口已释放） |
 
 > ⚠ **端口 5000 只能有一个 owner。** 旧 `px4_ws` 里起过的 bridge 常常留在后台
 > （`ps -eo pid,cmd \| grep bridge`），一占就是几小时，新起的会报
