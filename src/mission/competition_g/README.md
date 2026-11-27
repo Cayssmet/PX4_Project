@@ -49,7 +49,7 @@ IDLE -> TAKEOFF(18dm) -> PATROL(蛇形) -> [发现火情] -> APPROACH(≤5dm 确
 |---|---|---|
 | `/mission/target_waypoint` | `geometry_msgs/PoseStamped` | 位置环 PID |
 | `/mission/status` | `uav_interfaces/MissionStatus` | 地面站 / 记录 |
-| `/mission/fire_report` | 待定 | `car_link`（发给小车） |
+| `/mission/fire_report` | 待定 | `pos_link`（发给小车；先在 `pos_link` 帧里加 `0x02` 火源类型） |
 
 ## 状态
 

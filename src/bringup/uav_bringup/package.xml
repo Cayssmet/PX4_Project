@@ -36,7 +36,7 @@
   <exec_depend>px4_offboard</exec_depend>
   <exec_depend>k230_bridge</exec_depend>
   <exec_depend>competition_g</exec_depend>
-  <exec_depend>car_link</exec_depend>
+  <exec_depend>pos_link</exec_depend>
   -->
 
   <export>

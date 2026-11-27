@@ -16,7 +16,7 @@
                                        │                    position_pid_controller
                                        │                            │
                                        ▼                            ▼ /pid/cmd_vel
-                                  car_link ◄──TCP──> 小车    px4_offboard（飞控适配）
+                                  pos_link ◄──TCP──> 小车    px4_offboard（飞控适配）
                                                                     │
                                                                     ▼ MAVLink
                                                                  PX4 飞控
@@ -34,8 +34,7 @@
 | 控制 | `control/` | `position_pid_controller` | 位置环，出 `/pid/cmd_vel`（map 系速度） |
 | 飞控 | `flight/` | `px4_offboard` | 飞控适配：`mavlink_codec`（零依赖编解码）+ `frames`（坐标换算）+ `px4_node`（**只读**，点名拉状态 → `/flight/status`） |
 | 任务 | `mission/` | `competition_g` | **待写**：蛇形航线 + 任务状态机 |
-| 通信 | `comm/` | `car_link` | **待写**：热点 + TCP（9000 端口、`AA 55` 变长帧），与 ESP32-S3 消防车的正式链路 |
-| 通信 | `comm/` | `pos_link` | **已跑通**：热点 + TCP（5000 端口、12 字节定长帧），**树莓派 → ESP32-S3** 坐标下发（订阅 `/pos_link/target`，按 1 Hz 推）。`car_link` 的最小可用前身 |
+| 通信 | `comm/` | `pos_link` | **已跑通**：热点 + TCP（5000 端口、12 字节定长帧），**树莓派 → ESP32-S3** 坐标下发（订阅 `/pos_link/target`，按 1 Hz 推）。**这是唯一一条车链路**，以后加字段/加消息类型都在本包上改 |
 | 记录 | `recorder/` | `flight_data_recorder` | 飞行数据落盘 |
 | 启动 | `bringup/` | `uav_bringup` | launch / systemd / udev |
 

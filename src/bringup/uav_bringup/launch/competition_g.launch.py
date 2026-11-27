@@ -196,12 +196,8 @@ def generate_launch_description():
     #     name="competition_g_mission",
     #     output="screen",
     # )
-    # car_link = Node(
-    #     package="car_link",
-    #     executable="car_link_node",
-    #     name="car_link",
-    #     output="screen",
-    # )
+    # pos_link 不在这里起：它要独占 WiFi 热点与 5000 端口，
+    # 单独用 `ros2 launch pos_link pos_link.launch.py` 起更容易看清谁在连。
 
     return LaunchDescription(
         declare_args

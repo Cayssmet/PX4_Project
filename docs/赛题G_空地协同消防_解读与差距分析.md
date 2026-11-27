@@ -73,7 +73,7 @@
 | 18dm 高度定高巡航 | 绝对高度 ±10cm 级 | ✅ 光流 + 测距 + EKF2，已实测 |
 | 按航线全覆盖 | 水平定位精度 ~10cm，航点跟踪 | ⚠️ 雷达 SLAM，实测漂移量级可接受但有微小偏移 |
 | 一键启动全自动 | offboard 全程 + 任务状态机 | ❌ 待写（`px4_offboard` + `competition_g`） |
-| 每秒 1 次坐标上报 | TCP 1 Hz | ❌ 待写（`car_link`） |
+| 每秒 1 次坐标上报 | TCP 1 Hz | ✅ `pos_link` 已跑通（真机联调过，12 字节定长帧） |
 | 发现火源 | 下视相机红点检测 | ❌ 队友在 K230 上做 |
 | 飞到火源正上方 | 视觉伺服 | ❌ 队友在 K230 上做，我们接数据 |
 | 抛洒灭火包 | 舵机/电磁铁 + 投放机构 | ❌ 待定 |
@@ -155,7 +155,7 @@
 |---|---|---|
 | `flight_controller_bridge`（自定义串口 V2） | `px4_offboard`（MAVLink） | 换飞控了，且 V2 协议对 PX4 完全不适用 |
 | `camera_serial_bridge` | `k230_bridge` | 相机从「树莓派 USB 摄像头」换成 K230 独立板 |
-| `car_serial_bridge`（蓝牙串口） | `car_link`（WiFi TCP） | 赛题要求无线、且蓝牙距离/带宽不够 |
+| `car_serial_bridge`（蓝牙串口） | `pos_link`（WiFi TCP） | 赛题要求无线、且蓝牙距离/带宽不够 |
 | `gcs_serial_bridge` | 去掉 | 新方案不需要独立地面站链路 |
 | `waypoint_manager`（旧赛题任务层） | `competition_g` | 任务完全不同 |
 
@@ -183,7 +183,7 @@
                                        │                    position_pid_controller
                                        │                            │
                                        ▼                            ▼ /pid/cmd_vel
-                                  car_link ◄──TCP──> 小车    px4_offboard（飞控适配）
+                                  pos_link ◄──TCP──> 小车    px4_offboard（飞控适配）
                                                                     │
                                                                     ▼ MAVLink
                                                                  PX4 飞控
@@ -228,7 +228,7 @@
 
 1. **MAVLink 飞控适配**（`px4_offboard`）—— 没有它飞机不听派的话
 2. **航线 + 状态机**（`competition_g`）—— 22 分的基本盘
-3. **car_link**（TCP 1 Hz 坐标）—— 8 + 8 分
+3. **`pos_link`**（TCP 1 Hz 坐标，**已跑通**）—— 8 + 8 分
 4. **k230_bridge**（接视觉结论）—— 发挥①②
 5. 投放机构（硬件 + 一个 GPIO 节点）
 

@@ -1,5 +1,51 @@
 # 版本变更记录
 
+## v3.3.0 - 小车通信统一到 `pos_link`（删除 `car_link`）
+
+结论先说：**以后树莓派与消防车之间只有一条链路，就是 `src/comm/pos_link`。**
+要给它加字段、加消息类型、甚至改成双向，都在 `pos_link` 上改，不再并行维护第二套协议。
+
+### 删除
+
+- `src/comm/car_link/`（v0.1.0 骨架：`CMakeLists.txt`、`package.xml`、`README.md`、`config/`、`launch/`）
+- `tools/car_link_sim.py`（假消防车 TCP Client，9000 端口那套）
+
+那套设计是 9000 端口 + `AA 55 | VER | TYPE | LEN | PAYLOAD | CRC16` 变长帧，**从未实现**，
+只有文档；留着只会让队友照错文档写。它的字段想法没有丢，压缩保存到
+`docs/通信协议设计_v1.md` §3 末尾「附：候选扩展字段（未实现）」。
+
+### 改写
+
+- `docs/通信协议设计_v1.md` **§3 整节按实际实现重写**：标题改为「链路 B：树莓派 ↔ 消防车（`pos_link`）」，
+  内容换成 12 字节定长帧的逐字节表 + 两条参考帧 + 参数表 + 「怎么扩展（加字段/加消息/双向）」四步规则；
+  §4 故障表、§6 三条链路一览（端口 `9000` → `5000`）、§7 的 Q4（端口）、§8 落地顺序一并更正。
+  同时**诚实标注一处缺口**：`bridge_node.py` 目前只夹 int16，**没有** `[0,480]×[0,400]` 场地范围校验。
+- `src/comm/pos_link/package.xml` 描述：去掉「与 `car_link` 是两条独立链路」，改为「全系统唯一一条车链路」。
+- `src/comm/pos_link/README.md`：把「和 `car_link` 的关系」对照表换成「这是唯一一条树莓派 → 小车链路」+
+  「怎么扩展」四步（三处同步：`frame.py` / 固件 `main.c` / 协议文档；加类型不换帧头）。
+- `src/README.md`：ASCII 图与包表里的 `car_link` 全换成 `pos_link`，删掉「`car_link` 的最小可用前身」措辞。
+- `src/bringup/uav_bringup/package.xml`：`exec_depend` 由 `car_link` 改为 `pos_link`。
+- `src/bringup/uav_bringup/launch/competition_g.launch.py`：删掉注释里的 `car_link = Node(...)` 占位，
+  换成一句说明（`pos_link` 要独占热点与 5000 端口，单独 `ros2 launch pos_link pos_link.launch.py` 起更清楚）。
+- `src/mission/competition_g/README.md`：`/mission/fire_report` 的去向由 `car_link` 改为 `pos_link`。
+- `docs/赛题G_空地协同消防_解读与差距分析.md`：差距表「每秒 1 次坐标上报」标为 ✅ 已跑通；
+  资产替换表 `car_serial_bridge → pos_link`；链路图与最小可交付顺序同步。
+
+### 一并纳入的上板修复（v3.2.1 之后、此前未打 tag 的三个提交）
+
+- `fe53c13`：`pos_link/package.xml` 非法 XML；`rclpy` 命名冲突
+- `32669c3`：固定 ESP32-S3 目标；补 ESP-IDF 产物忽略规则
+- `1e0339e`：v3.2.0 本体（补打 tag `v3.2.0`）
+
+### 未做（留给后续版本）
+
+- `pos_link` 的场地范围校验（越界应丢弃并告警，而不是夹到 int16）
+- `PointStamped.header.frame_id` 校验
+- `hold_last_on_stale` 默认值（现在 `true`，坐标过期后仍发最后一帧）
+- `tcp_connect()` 的 `connect()` 超时
+- ESP32 固件 `WIFI_EVENT_STA_DISCONNECTED` 回调里 `vTaskDelay(1000)` 应改为「回调只置标志 + 独立任务重连」
+- `src/comm/pos_link` 尚未同步到树莓派 `~/ros2_ws/src/comm/pos_link` 并 `colcon build`
+
 ## v3.2.1 - pos_link 方向反转：树莓派 → ESP32-S3 坐标下发
 
 项目要的是**树莓派把坐标发给 ESP32**（树莓派算、ESP32 执行），v3.2.0 归档时写反了
