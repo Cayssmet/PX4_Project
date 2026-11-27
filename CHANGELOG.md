@@ -1,5 +1,37 @@
 # 版本变更记录
 
+## v3.3.1 - `pos_link` 迁移进 `~/ros2_ws` + 校验接口预留
+
+在树莓派上实地核对后完成的收口。
+
+### 迁移（树莓派侧，不进 git）
+
+- 核对了 `/home/ljz/px4_ws/src/comm/pos_link`：除 `bridge_node.py` 少两行注释外，
+  与仓库 `src/comm/pos_link` **逐字节一致**（`frame.py`、`launch`、`setup.py`、
+  `test_frame.py`、`config/pos_link.yaml` 的 sha256 全部相同）。
+- 已把仓库版本复制到 **`~/ros2_ws/src/comm/pos_link`**（与仓库同路径），
+  `colcon build --packages-select pos_link --symlink-install` → `Finished [2.65s]`，
+  产物 `install/pos_link/lib/pos_link/bridge`。
+- 环路实测（新构建、端口 5100 避开旧的占用）：`ros2 topic pub` → bridge → TCP →
+  假 ESP32，**收到 5 个好帧、0 坏帧、0 次序号跳变**。
+
+### 代码
+
+- `pos_link` **v1.2.0**：`bridge_node.py` 新增 `_validate_target(msg, x, y)` ——
+  **预留校验接口，当前实现直接 `return None`（一律放行）**；`_on_target` 里
+  统一走它，返回字符串则丢弃并打日志。要加的检查（`frame_id`、场地范围、
+  单帧跳变）都写在这一个函数里，不动其它逻辑。
+- 场地范围校验**按决定暂不启用**（先确认上游一定喂场地坐标）。
+- `README.md`：补「部署位置（2026-11-27 起统一）」表 + 「端口 5000 只能有一个 owner」
+  的坑（旧 `px4_ws` 里起过的 bridge 常驻后台会占住端口）+ 「校验（预留接口）」一节。
+
+### 现场发现（记一笔）
+
+树莓派上有一个 **2026-11-25 启动、至今仍在跑的旧 bridge**（PID 4431，
+`/home/ljz/px4_ws/install/.../bridge`），一直占着 `0.0.0.0:5000`。
+它用的是旧工作区的 install，跟仓库代码等价但**不是** `~/ros2_ws` 的构建产物；
+正式联调前应先杀掉，改用 `~/ros2_ws` 的这一份。
+
 ## v3.3.0 - 小车通信统一到 `pos_link`（删除 `car_link`）
 
 结论先说：**以后树莓派与消防车之间只有一条链路，就是 `src/comm/pos_link`。**

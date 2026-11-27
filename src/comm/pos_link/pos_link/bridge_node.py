@@ -134,11 +134,33 @@ class PosLinkBridge(Node):
 
     # ---------------- 坐标来源 ----------------
 
+    def _validate_target(self, msg: PointStamped, x: float, y: float) -> "Optional[str]":
+        """坐标合法性检查 —— **预留接口，现在一律放行**。
+
+        联调时要加的检查都写在这里：返回 `None` 表示接受，返回字符串表示拒绝
+        并把它当日志原因打出来。这样加校验不用碰 `_on_target` 的其它逻辑。
+
+        计划中按需再开的检查：
+          * `msg.header.frame_id` 必须是 `map`（现在上游用米还是 cm、在哪个坐标系，
+            全靠双方自觉，写错了会被静默当成 cm 发出去）
+          * 场地范围 x∈[0,480] y∈[0,400]（cm）—— 赛题 48dm×40dm；**按需要再开**，
+            开之前先确认上游一定会喂场地坐标
+          * 单帧跳变（例如 >50cm/帧）或长时间不动的「僵值」检测
+        """
+        return None
+
     def _on_target(self, msg: PointStamped) -> None:
         """坐标源的回调。想接别的来源，改这里就行——比如从服务调用拿值。"""
         x, y = msg.point.x, msg.point.y
         if not (math.isfinite(x) and math.isfinite(y)):
             self.get_logger().warning("丢弃非法坐标（NaN/Inf）")
+            return
+
+        reject_reason = self._validate_target(msg, x, y)
+        if reject_reason is not None:
+            self.get_logger().warning(
+                f"丢弃坐标 ({x:.1f}, {y:.1f})：{reject_reason}", throttle_duration_sec=5.0
+            )
             return
 
         ix = max(INT16_MIN, min(INT16_MAX, int(round(x))))

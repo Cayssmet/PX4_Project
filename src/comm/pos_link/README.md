@@ -22,9 +22,9 @@
 ## 快速开始
 
 ```bash
-# 1. 编
-cd <工作区根目录>
-colcon build --packages-select pos_link
+# 1. 编（树莓派上工作区是 ~/ros2_ws）
+cd ~/ros2_ws
+colcon build --packages-select pos_link --symlink-install
 source install/setup.bash
 
 # 2. 起桥接节点（会打印「已监听 0.0.0.0:5000」）
@@ -40,6 +40,19 @@ python3 tools/pos_link_sim.py --host 127.0.0.1   # 就在本机连
 ```
 
 正常情况下桥接节点每 5 秒打印一行 `已下发 seq=.. x=.. y=..`，假 ESP32 每帧打一行。
+
+### 部署位置（2026-11-27 起统一）
+
+| 项 | 位置 |
+|---|---|
+| 树莓派上的源码 | **`~/ros2_ws/src/comm/pos_link`**（与仓库同路径，逐字节一致） |
+| 构建产物 | `~/ros2_ws/{build,install}/pos_link` |
+| 早期验证用的旧工作区 | `/home/ljz/px4_ws`（**已废弃**，别再 `colcon build` 它） |
+
+> ⚠ **端口 5000 只能有一个 owner。** 旧 `px4_ws` 里起过的 bridge 常常留在后台
+> （`ps -eo pid,cmd \| grep bridge`），一占就是几小时，新起的会报
+> `端口 5000 绑定失败（是不是已经有一个 bridge 在跑？）`。换端口验证最快：
+> `ros2 run pos_link bridge --ros-args -p listen_port:=5100`，假 ESP32 用 `--port 5100`。
 
 ## 坐标从哪来（接口）
 
@@ -64,6 +77,19 @@ python3 tools/pos_link_sim.py --host 127.0.0.1   # 就在本机连
 坐标源断了：默认 `hold_last_on_stale: true`——继续发最后一次值（对执行机构来说
 「知道位置但不动」比「突然没指令」安全），同时打告警。想改成「断了就停发」，
 把该参数设成 `false`。
+
+## 校验（预留接口，现在一律放行）
+
+`bridge_node.py` 里有一个 `_validate_target(msg, x, y)`：返回 `None` = 接受，
+返回字符串 = 拒绝并把该字符串当日志原因打出来。**当前实现是空函数，什么都放行。**
+
+要加校验就只改这一个函数，不用碰 `_on_target` 的其它逻辑。计划中按需再开的：
+
+| 检查 | 什么时候加 |
+|---|---|
+| `msg.header.frame_id == "map"` | 上游可能用米或用别的坐标系，写错会被静默当 cm 发出去 |
+| 场地范围 `x∈[0,480] y∈[0,400]` | 赛题 48dm×40dm。**暂时不加**（先确认上游一定喂场地坐标） |
+| 单帧跳变 / 僵值 | 联调时按实际现象定阈值 |
 
 ## 参数
 

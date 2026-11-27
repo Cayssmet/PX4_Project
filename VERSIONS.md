@@ -1,6 +1,6 @@
 # 无人机导航工作区版本清单
 
-当前工作区发布版本：**v3.3.0**（2023 电赛 G 题《空地协同智能消防》：小车通信统一到 `pos_link`）
+当前工作区发布版本：**v3.3.1**（2023 电赛 G 题《空地协同智能消防》：`pos_link` 已迁入 `~/ros2_ws`，环路实测通过）
 
 > 想回到"还没碰 PX4"的状态：`git checkout v1.2.0`。想回到"还没有 v2 迁移代码"的状态：`git checkout v1.1`。
 > 想回到"还没按 G 题重构"的状态：`git checkout v2.0.0`。
@@ -17,7 +17,7 @@
 | `px4_offboard` | v3.1.0 | 飞控适配层。**v3.1.0 改为纯 Python（ament_python）**：`mavlink_codec`（零依赖 MAVLink v1 编解码）+ `frames`（ENU/FLU↔NED/FRD 换算）+ `px4_node`（**只读**：点名拉状态 → `/flight/status`）。取消了 uXRCE-DDS 与 `px4_msgs` 依赖；C++ 骨架移入 `archive/legacy_v2_cpp_frame_transforms/` |
 | `k230_bridge` | v0.1.0 | **新增（骨架）**：K230 庐山派下视相机串口桥，只接红点结论与视觉导航标志位 |
 | `competition_g` | v0.1.0 | **新增（骨架）**：G 题任务层，蛇形航线 + 任务状态机 |
-| `pos_link` | v1.1.0 | **已跑通，且是全系统唯一一条车链路**：树莓派开热点 + TCP，**树莓派 → ESP32-S3 下发坐标**（订阅 `/pos_link/target`，1 Hz 推 12 字节定长帧）；ESP32 侧 `firmware/esp32_pos_rx` 收帧执行。坐标源是接口，换源不改代码；协议文档 `D_UAV_ESP32_POS_LINK_v1.0`。**v3.3.0 起原 `car_link` 已删除，以后给小车加字段/加消息类型都在本包上改** |
+| `pos_link` | v1.2.0 | **已跑通，且是全系统唯一一条车链路**：树莓派开热点 + TCP，**树莓派 → ESP32-S3 下发坐标**（订阅 `/pos_link/target`，1 Hz 推 12 字节定长帧）；ESP32 侧 `firmware/esp32_pos_rx` 收帧执行。坐标源是接口，换源不改代码；协议文档 `D_UAV_ESP32_POS_LINK_v1.0`。**v3.3.0 起原 `car_link` 已删除，以后给小车加字段/加消息类型都在本包上改** |
 
 > 已移入 `archive/legacy_2023_uav/` 的旧包：`flight_controller_bridge`、`camera_serial_bridge`、
 > `car_serial_bridge`、`gcs_serial_bridge`、`waypoint_manager`、`csm`、`ros2_laser_scan_matcher`。
@@ -46,6 +46,7 @@
 - `v3.2.0`：**ESP32-S3 坐标链路跑通**。新增 `src/comm/pos_link`（ament_python：`frame.py` 12 字节定长帧编解码 + `bridge_node.py` TCP Server → `/esp32/position`）、`firmware/esp32_pos_tx`（ESP-IDF v5.5.3，扫描锁定 BSSID、失联 5 次自动解锁、`WIFI_AUTH_WPA_PSK` 门槛）、`docs/protocols/D_UAV_ESP32_POS_LINK_v1.0.md`、`deploy/systemd/pos-link.service`、`tools/pos_link_sim.py`。真机实测 1.000 Hz、无丢帧；记录 211（authmode threshold）长坑。
 - `v3.2.1`：**pos_link 方向反转**。v3.2.0 归档时把链路写反了（ESP32 → 树莓派），按项目实际需求改为**树莓派 → ESP32-S3**：树莓派算坐标、按 1 Hz 下发，ESP32 接收后执行。协议字节不变（12 字节定长帧 + CRC-16/CCITT-FALSE + 两条参考帧照旧）；改的是传输角色与代码：`bridge_node.py` 由「监听解析」改为「订阅 `input_topic` → 定时推送」（坐标源做成接口），`frame.py` 增 `FrameReader`，固件 `esp32_pos_tx` 改为 `esp32_pos_rx`（收帧 + `on_position()` 钩子），`tools/pos_link_sim.py` 改为假 ESP32 收包，文档与时序全面更正。
 - `v3.3.0`：**小车通信统一到 `pos_link`**。删除骨架包 `src/comm/car_link` 与 `tools/car_link_sim.py`（那套 9000 端口、`AA 55 + VER + TYPE + LEN` 变长帧从未实现，留着只会让队友照错文档写）；`docs/通信协议设计_v1.md` §3 按实际实现重写（12 字节定长帧、`:5000`、单向下发），原多字段想法压缩为「候选扩展字段」并在文中写明扩展规则；`uav_bringup` 的 `car_link` 依赖改 `pos_link`、launch 里的占位节点删除；同步 `src/README.md`、赛题解读、`competition_g` README。另并入 v3.2.1 之后的三个上板修复：`pos_link/package.xml` 非法 XML、`rclpy` 命名冲突、ESP32 目标固定与 ESP-IDF 产物忽略规则。
+- `v3.3.1`：**`pos_link` 迁入 `~/ros2_ws` + 校验接口预留**。核对 `/home/ljz/px4_ws` 里的旧副本，除 `bridge_node.py` 少两行注释外与仓库逐字节一致；已复制到 `~/ros2_ws/src/comm/pos_link` 并 `colcon build` 通过，环路实测（新构建、5100 端口）收到 5 个好帧、0 坏帧、0 次序号跳变。代码上 `pos_link` 升 **v1.2.0**：`bridge_node.py` 新增 `_validate_target(msg, x, y)` 预留校验接口（当前一律放行），`frame_id`/场地范围/跳变检测以后只改这一个函数；**场地范围校验按决定暂不启用**。
 - 后续功能修改先更新对应包版本，再同步本文件和根目录 `VERSION`。
 
 ## 版本线划分（2026-10 起）
